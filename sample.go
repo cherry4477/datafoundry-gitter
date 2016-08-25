@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -15,8 +17,8 @@ var (
 	// Set callback to http://127.0.0.1:7000/github_oauth_cb
 	// Set ClientId and ClientSecret to
 	oauthConf = &oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
+		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		Scopes:       []string{"user:email", "repo"},
 		Endpoint:     githuboauth.Endpoint,
 	}
@@ -67,7 +69,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		var user string = "zonesan"
 		UserProfile(client, user)
 		ListPersonalRepos(client, user)
-		ListOrgRepos(client)
+		//ListOrgRepos(client)
 	}()
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -90,6 +92,7 @@ func ListPersonalRepos(client *github.Client, user string) error {
 	for {
 		repos, resp, err := client.Repositories.List("", opt)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		allRepos = append(allRepos, repos...)
@@ -107,11 +110,12 @@ func ListPersonalRepos(client *github.Client, user string) error {
 		return err
 	}
 
-	//fmt.Printf("Repos:\n%s\n", string(d))
+	fmt.Printf("Repos:\n%s\n", string(d))
 	_ = d
 
 	for idx, repo := range allRepos {
-		fmt.Println(idx, *repo.CloneURL)
+		fmt.Println(idx, *repo.Owner.Login, *repo.Name, *repo.CloneURL)
+		go ListBranches(client, *repo.Owner.Login, *repo.Name)
 	}
 
 	return nil
@@ -124,6 +128,7 @@ func ListOrgRepos(client *github.Client) error {
 	for {
 		orgs, resp, err := client.Organizations.List("", opt)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		allOrgs = append(allOrgs, orgs...)
@@ -134,6 +139,28 @@ func ListOrgRepos(client *github.Client) error {
 		//fmt.Printf("fetch next %d repos\n", resp.NextPage)
 	}
 	fmt.Printf("\nTotal %d organization(s).\n", len(allOrgs))
+	orgOpt := &github.RepositoryListByOrgOptions{
+		ListOptions: github.ListOptions{PerPage: 30},
+	}
+	var allRepos []*github.Repository
+	for _, org := range allOrgs {
+		for {
+			repos, resp, err := client.Repositories.ListByOrg(*org.Login, orgOpt)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			allRepos = append(allRepos, repos...)
+			if resp.NextPage == 0 {
+				break
+			}
+			orgOpt.ListOptions.Page = resp.NextPage
+		}
+	}
+
+	for idx, repo := range allRepos {
+		fmt.Println(idx, *repo.CloneURL)
+	}
 
 	d, err := json.MarshalIndent(allOrgs, "", "  ")
 	if err != nil {
@@ -145,6 +172,51 @@ func ListOrgRepos(client *github.Client) error {
 	return nil
 }
 
+func ListBranches(client *github.Client, owner, repo string) error {
+	var allBranches []*github.Branch
+	opt := &github.ListOptions{PerPage: 30}
+	for {
+		branches, resp, err := client.Repositories.ListBranches(owner, repo, opt)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		allBranches = append(allBranches, branches...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+		//fmt.Printf("fetch next %d branches\n", resp.NextPage)
+	}
+	fmt.Printf("\nbranches of %s/%s:\n", owner, repo)
+	for _, branch := range allBranches {
+		fmt.Println(*branch.Name)
+	}
+	return ListTags(client, owner, repo)
+}
+
+func ListTags(client *github.Client, owner, repo string) error {
+	var allTags []*github.RepositoryTag
+	opt := &github.ListOptions{PerPage: 30}
+	for {
+		tags, resp, err := client.Repositories.ListTags(owner, repo, opt)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		allTags = append(allTags, tags...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+		//fmt.Printf("fetch next %d tags\n", resp.NextPage)
+	}
+	fmt.Printf("\ntags of %s/%s:\n", owner, repo)
+	for _, tag := range allTags {
+		fmt.Println(*tag.Name)
+	}
+	return nil
+}
 func UserProfile(client *github.Client, username string) error {
 	user, _, err := client.Users.Get("")
 	if err != nil {
@@ -163,4 +235,12 @@ func UserProfile(client *github.Client, username string) error {
 	fmt.Printf("User:\n%s\n", string(d))
 	return nil
 
+}
+
+func init() {
+	if len(oauthConf.ClientID) == 0 || len(oauthConf.ClientSecret) == 0 {
+		fmt.Println("client id or clientSecret must be specified.")
+	} else {
+		fmt.Println("oauthConf ok. starting...")
+	}
 }
