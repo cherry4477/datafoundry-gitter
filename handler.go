@@ -5,25 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
-	githuboauth "golang.org/x/oauth2/github"
-)
-
-var (
-	// You must register the app at https://github.com/settings/applications
-	// Set callback to http://127.0.0.1:7000/github_oauth_cb
-	// Set ClientId and ClientSecret to
-	oauthConf = &oauth2.Config{
-		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		Scopes:       []string{"user:email", "repo"},
-		Endpoint:     githuboauth.Endpoint,
-	}
-	// random string for oauth2 API calls to protect against CSRF
-	oauthStateString = "ashdkjahiweakdaiirhfljskaowr"
 )
 
 const htmlIndex = `<html><body>
@@ -73,14 +57,6 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-}
-
-func main() {
-	http.HandleFunc("/", handleMain)
-	http.HandleFunc("/login", handleGitHubLogin)
-	http.HandleFunc("/github_oauth_cb", handleGitHubCallback)
-	fmt.Print("Started running on http://127.0.0.1:7000\n")
-	fmt.Println(http.ListenAndServe(":7000", nil))
 }
 
 func ListPersonalRepos(client *github.Client, user string) error {
@@ -235,12 +211,4 @@ func UserProfile(client *github.Client, username string) error {
 	fmt.Printf("User:\n%s\n", string(d))
 	return nil
 
-}
-
-func init() {
-	if len(oauthConf.ClientID) == 0 || len(oauthConf.ClientSecret) == 0 {
-		fmt.Println("client id or clientSecret must be specified.")
-	} else {
-		fmt.Println("oauthConf ok. starting...")
-	}
 }
