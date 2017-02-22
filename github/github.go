@@ -9,6 +9,7 @@ import (
 type Github struct {
 	client *github.Client
 	repo   *api.ReposityService
+	Gitter
 }
 
 func (github Github) ListPersonalRepos() *api.ReposityService {}
