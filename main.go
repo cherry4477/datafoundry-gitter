@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/julienschmidt/httprouter"
+	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
 )
@@ -30,10 +32,12 @@ func main() {
 		return
 	}
 
-	http.HandleFunc("/", handleMain)
-	http.HandleFunc("/login", handleGitHubLogin)
-	http.HandleFunc("/github_oauth_cb", handleGitHubCallback)
+	router := httprouter.New()
+	router.GET("/", handleMain)
+	router.GET("/login", handleGitHubLogin)
+	router.GET("/github_oauth_cb", handleGitHubCallback)
 
-	fmt.Println("Started running on http://127.0.0.1:7000")
-	fmt.Println(http.ListenAndServe(":7000", nil))
+	clog.Debug("listening on port 7000 ...")
+	clog.Fatal(http.ListenAndServe(":7000", router))
+
 }

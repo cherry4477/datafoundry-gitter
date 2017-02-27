@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/google/go-github/github"
+	"github.com/julienschmidt/httprouter"
+	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
 )
 
@@ -16,21 +18,28 @@ Logged in with <a href="/login">GitHub</a>
 `
 
 // /
-func handleMain(w http.ResponseWriter, r *http.Request) {
+func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(htmlIndex))
 }
 
 // /login
-func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
+func handleGitHubLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	oauthConf.RedirectURL = "http://localhost:7000/github_oauth_cb?redirect_url=abcde&user=zonesan"
 	url := oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 // /github_oauth_cb. Called by github after authorization is granted
-func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
+func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	redirect_url := r.FormValue("redirect_url")
+	user := r.FormValue("user")
+	clog.Debug("user:", user, "redirect_url:", redirect_url)
+
 	state := r.FormValue("state")
+	clog.Debug("state:", state)
+
 	if state != oauthStateString {
 		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -38,6 +47,8 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := r.FormValue("code")
+	clog.Debug("code:", code)
+
 	token, err := oauthConf.Exchange(oauth2.NoContext, code)
 	if err != nil {
 		fmt.Printf("oauthConf.Exchange() failed with '%s'\n", err)
@@ -52,7 +63,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		var user string = "zonesan"
 		UserProfile(client, user)
-		ListPersonalRepos(client, user)
+		//ListPersonalRepos(client, user)
 		//ListOrgRepos(client)
 	}()
 

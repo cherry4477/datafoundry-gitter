@@ -21,6 +21,12 @@
 			"revisionTime": "2016-08-10T19:53:38Z"
 		},
 		{
+			"checksumSHA1": "AqhUBWm7JCj44y1Fz7bdDWSqPq8=",
+			"path": "github.com/zonesan/clog",
+			"revision": "7ed8b0534d6ec80b31e21fbbfbe1e3363cc22cc7",
+			"revisionTime": "2016-10-09T07:53:50Z"
+		},
+		{
 			"checksumSHA1": "JyI2a2bilowKRscyrTJM/gmsHWw=",
 			"path": "golang.org/x/oauth2",
 			"revision": "c10ba270aa0bf8b8c1c986e103859c67a9103061",
