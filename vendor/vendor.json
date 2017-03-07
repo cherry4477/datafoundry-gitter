@@ -21,6 +21,12 @@
 			"revisionTime": "2016-08-10T19:53:38Z"
 		},
 		{
+			"checksumSHA1": "tVac3wUT6lU95mno5Xb1xXpm5no=",
+			"path": "github.com/xanzy/go-gitlab",
+			"revision": "442ae38dfd2f6a1e94d5f384bb6df1784395e732",
+			"revisionTime": "2017-03-03T19:43:12Z"
+		},
+		{
 			"checksumSHA1": "AqhUBWm7JCj44y1Fz7bdDWSqPq8=",
 			"path": "github.com/zonesan/clog",
 			"revision": "7ed8b0534d6ec80b31e21fbbfbe1e3363cc22cc7",
