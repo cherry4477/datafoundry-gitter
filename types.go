@@ -1,4 +1,4 @@
-package api
+package main
 
 type ReposityService struct {
 	Login     string     `json:"login"`
