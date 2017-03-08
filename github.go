@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/google/go-github/github"
+	"github.com/zonesan/clog"
 )
 
 func ListPersonalRepos(client *github.Client, user string) error {
@@ -161,3 +162,14 @@ func UserProfile(client *github.Client, username string) error {
 	return nil
 
 }
+
+type GitHub struct {
+}
+
+func (github *GitHub) ListPersonalRepos(user string)   { clog.Debug("called.") }
+func (github *GitHub) ListOrgRepos(org string)         { clog.Debug("called.") }
+func (github *GitHub) ListBranches(owner, repo string) { clog.Debug("called.") }
+func (github *GitHub) ListTags(owner, repo string)     { clog.Debug("called.") }
+func (github *GitHub) CreateWebhook(hook interface{})  { clog.Debug("called.") }
+func (github *GitHub) RemoveWebhook(hook interface{})  { clog.Debug("called.") }
+func (github *GitHub) CheckWebhook(hook interface{})   { clog.Debug("called.") }

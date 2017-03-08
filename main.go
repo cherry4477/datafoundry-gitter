@@ -32,7 +32,7 @@ var (
 	}
 
 	// random string for oauth2 API calls to protect against CSRF
-	oauthStateString = "ashdkjahiweakdaiirhfljskaowr"
+	oauthStateString = randToken()
 )
 
 // http://localhost:18080/?code=958b1416f6362d24229ea051debeaa5256db9539ff12655f55aa0afc989429af&state=your_unique_state_hash

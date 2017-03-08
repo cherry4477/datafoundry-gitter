@@ -56,6 +56,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
+	clog.Debug(token)
 
 	oauthClient := oauthConf.Client(oauth2.NoContext, token)
 	client := github.NewClient(oauthClient)
@@ -110,10 +111,17 @@ func handleGitLabCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 	clog.Debug(token)
 
 	go func() {
-		a, c, b := client.Users.CurrentUser()
-		clog.Debug(a, b, c)
+		a, b, c := client.Users.CurrentUser()
+		clog.Debug("user:", a, b, c)
 		//ListPersonalRepos(client, user)
 		//ListOrgRepos(client)
+		//opt := &gitlab.ListProjectsOptions{}
+		d, e, f := client.Projects.ListProjects(nil)
+		clog.Debug("project", d, e, f)
+
+		session, resp, err := client.Session.GetSession(nil)
+		clog.Debugf("session", session, resp, err)
+
 	}()
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
