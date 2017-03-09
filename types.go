@@ -1,5 +1,9 @@
 package main
 
+import (
+	"golang.org/x/oauth2"
+)
+
 type Gitter interface {
 	ListPersonalRepos(user string)
 	ListOrgRepos(org string)
@@ -8,6 +12,8 @@ type Gitter interface {
 	CreateWebhook(hook interface{})
 	RemoveWebhook(hook interface{})
 	CheckWebhook(hook interface{})
+	SaveToken(tok *oauth2.Token) error
+	LoadToken() (*oauth2.Token, error)
 }
 
 type ReposityService struct {

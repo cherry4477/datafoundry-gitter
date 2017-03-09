@@ -19,3 +19,7 @@ func randToken() string {
 	rand.Read(b)
 	return base64.StdEncoding.EncodeToString(b)
 }
+
+// func redirectUrl(oauthConf *oauth2.Config) string {
+// 	return ""
+// }
