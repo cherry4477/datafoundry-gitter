@@ -50,9 +50,9 @@ func checkWebhook(gitter Gitter, hook interface{}) {
 // 	return gitter.SaveToken(tok)
 // }
 
-func loadGitLabToken(store Storage, user string) {
+func loadGitLabToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitLabToken interface")
-	store.LoadTokenGitlab(user)
+	return store.LoadTokenGitlab(user)
 }
 
 func saveGitLabToken(store Storage, user string, tok *oauth2.Token) error {
@@ -61,14 +61,14 @@ func saveGitLabToken(store Storage, user string, tok *oauth2.Token) error {
 	return nil
 }
 
-func loadGitHubToken(store Storage, user string) {
+func loadGitHubToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitHubToken interface")
-	store.LoadTokenGithub(user)
+	return store.LoadTokenGithub(user)
 }
 
-func saveGitHubToken(store Storage, user string, tok *oauth2.Token) {
+func saveGitHubToken(store Storage, user string, tok *oauth2.Token) error {
 	clog.Debug("saveGitHubToken interface")
-	store.SaveTokenGithub(user, tok)
+	return store.SaveTokenGithub(user, tok)
 }
 
 func exchangeToken(oauthConf *oauth2.Config, code string) (*oauth2.Token, error) {

@@ -27,6 +27,11 @@ func main() {
 
 	//gitlab callback handler
 	router.GET("/gitlab_oauth_cb", handleGitLabCallback)
+	router.GET("/repos/:source", handleRepos)
+	router.GET("/repos/:source/:repo/branches", handleRepoBranches)
+	router.GET("/repos/:source/:repo/webhook", handleCheckWebhook)
+	router.POST("/repos/:source/:repo/webhook", handleCreateWebhook)
+	router.DELETE("/repos/:source/:repo/webhook", handleRemoveWebhook)
 
 	clog.Debug("listening on port 7000 ...")
 	clog.Fatal(http.ListenAndServe(":7000", router))

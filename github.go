@@ -32,13 +32,49 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	return hub
 }
 
-func (github *GitHub) ListPersonalRepos(user string)   { clog.Debug("called.") }
-func (github *GitHub) ListOrgRepos(org string)         { clog.Debug("called.") }
-func (github *GitHub) ListBranches(owner, repo string) { clog.Debug("called.") }
-func (github *GitHub) ListTags(owner, repo string)     { clog.Debug("called.") }
-func (github *GitHub) CreateWebhook(hook interface{})  { clog.Debug("called.") }
-func (github *GitHub) RemoveWebhook(hook interface{})  { clog.Debug("called.") }
-func (github *GitHub) CheckWebhook(hook interface{})   { clog.Debug("called.") }
+func (hub *GitHub) ListPersonalRepos(user string) {
+	clog.Debug("called.")
+
+	var allRepos []*github.Repository
+	opt := &github.RepositoryListOptions{
+		ListOptions: github.ListOptions{PerPage: 30},
+	}
+	for {
+		repos, resp, err := hub.client.Repositories.List("", opt)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		allRepos = append(allRepos, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.ListOptions.Page = resp.NextPage
+		//fmt.Printf("fetch next %d repos\n", resp.NextPage)
+	}
+	fmt.Printf("Total %d repos.\n", len(allRepos))
+
+	d, err := json.MarshalIndent(allRepos, "", "  ")
+	if err != nil {
+		fmt.Printf("json.MarshlIndent(allRepos) failed with %s\n", err)
+		return
+	}
+
+	fmt.Printf("Repos:\n%s\n", string(d))
+	_ = d
+
+	// for idx, repo := range allRepos {
+	// 	fmt.Println(idx, *repo.Owner.Login, *repo.Name, *repo.CloneURL)
+	// 	go ListBranches(client, *repo.Owner.Login, *repo.Name)
+	// }
+}
+
+func (hub *GitHub) ListOrgRepos(org string)         { clog.Debug("called.") }
+func (hub *GitHub) ListBranches(owner, repo string) { clog.Debug("called.") }
+func (hub *GitHub) ListTags(owner, repo string)     { clog.Debug("called.") }
+func (hub *GitHub) CreateWebhook(hook interface{})  { clog.Debug("called.") }
+func (hub *GitHub) RemoveWebhook(hook interface{})  { clog.Debug("called.") }
+func (hub *GitHub) CheckWebhook(hook interface{})   { clog.Debug("called.") }
 
 func ListPersonalRepos(client *github.Client, user string) error {
 
