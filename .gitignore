@@ -1,3 +1,4 @@
 start.sh
 datafoundry-gitter
 .idea
+docker-compose.yml
