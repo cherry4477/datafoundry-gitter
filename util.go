@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -23,3 +25,11 @@ func randToken() string {
 // func redirectUrl(oauthConf *oauth2.Config) string {
 // 	return ""
 // }
+
+func debug(v interface{}) {
+	d, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		fmt.Printf("json.MarshlIndent() failed with %s\n", err)
+	}
+	fmt.Println(string(d))
+}

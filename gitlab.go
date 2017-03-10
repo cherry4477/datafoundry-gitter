@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	gitlab "github.com/xanzy/go-gitlab"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
@@ -36,7 +35,7 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 
 }
 
-func (lab *GitLab) ListPersonalRepos(user string) {
+func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
 	clog.Debugf("list repos of %s called. on progress, nothing to show.", user)
 
 	var allRepos []*gitlab.Project
@@ -49,25 +48,49 @@ func (lab *GitLab) ListPersonalRepos(user string) {
 		repos, resp, err := lab.client.Projects.ListProjects(opt)
 		if err != nil {
 			clog.Error(err)
-			return
+			return nil
 		}
 		allRepos = append(allRepos, repos...)
 		if resp.NextPage == 0 {
 			break
 		}
 		opt.ListOptions.Page = resp.NextPage
-		//fmt.Printf("fetch next %d repos\n", resp.NextPage)
+		clog.Debugf("fetch next %d repos\n", resp.NextPage)
 	}
-	clog.Infof("Total %d repos.\n", len(allRepos))
+	clog.Debugf("Total %d repos.\n", len(allRepos))
 
-	d, err := json.MarshalIndent(allRepos, "", "  ")
-	if err != nil {
-		clog.Error("json.MarshlIndent(allRepos) failed with %s\n", err)
-		return
+	labRepos := new([]Repositories)
+
+	repos := make(map[OwnerInfo][]Repository)
+
+	for _, v := range allRepos {
+		repo := Repository{}
+		owner := OwnerInfo{}
+
+		owner.Namespace = v.Namespace.Name
+		if v.Owner != nil {
+			owner.Personal = true
+		}
+		repo.CloneUrl = v.HTTPURLToRepo
+		repo.ID = v.ID
+		repo.Name = v.Name
+		repo.Namespace = v.Namespace.Name
+		repo.Private = !v.Public
+		repo.SshUrl = v.SSHURLToRepo
+		repos[owner] = append(repos[owner], repo)
 	}
 
-	clog.Printf("Repos:\n%s\n", string(d))
-	_ = d
+	for k, v := range repos {
+		repo := new(Repositories)
+		repo.OwnerInfo = k
+		repo.Repos = v
+
+		*labRepos = append(*labRepos, *repo)
+	}
+
+	//debug(labRepos)
+
+	return labRepos
 
 }
 

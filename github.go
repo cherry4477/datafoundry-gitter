@@ -32,7 +32,7 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	return hub
 }
 
-func (hub *GitHub) ListPersonalRepos(user string) {
+func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
 	clog.Debug("called.")
 
 	var allRepos []*github.Repository
@@ -43,30 +43,55 @@ func (hub *GitHub) ListPersonalRepos(user string) {
 		repos, resp, err := hub.client.Repositories.List("", opt)
 		if err != nil {
 			log.Println(err)
-			return
+			return nil
 		}
 		allRepos = append(allRepos, repos...)
 		if resp.NextPage == 0 {
 			break
 		}
 		opt.ListOptions.Page = resp.NextPage
-		//fmt.Printf("fetch next %d repos\n", resp.NextPage)
+		clog.Debugf("fetch next %d repos\n", resp.NextPage)
 	}
 	fmt.Printf("Total %d repos.\n", len(allRepos))
 
-	d, err := json.MarshalIndent(allRepos, "", "  ")
-	if err != nil {
-		fmt.Printf("json.MarshlIndent(allRepos) failed with %s\n", err)
-		return
+	hubRepos := new([]Repositories)
+
+	repos := make(map[OwnerInfo][]Repository)
+
+	for _, v := range allRepos {
+		repo := Repository{}
+		owner := OwnerInfo{}
+
+		owner.Namespace = *v.Owner.Login
+		if *v.Owner.Type == "User" {
+			owner.Personal = true
+		}
+		repo.CloneUrl = *v.CloneURL
+		repo.ID = *v.ID
+		repo.Name = *v.Name
+		repo.Namespace = *v.Owner.Login
+		repo.Private = *v.Private
+		repo.SshUrl = *v.SSHURL
+		repos[owner] = append(repos[owner], repo)
 	}
 
-	fmt.Printf("Repos:\n%s\n", string(d))
-	_ = d
+	for k, v := range repos {
+		repo := new(Repositories)
+		repo.OwnerInfo = k
+		repo.Repos = v
+
+		*hubRepos = append(*hubRepos, *repo)
+	}
+
+	debug(hubRepos)
+
+	return hubRepos
 
 	// for idx, repo := range allRepos {
 	// 	fmt.Println(idx, *repo.Owner.Login, *repo.Name, *repo.CloneURL)
 	// 	go ListBranches(client, *repo.Owner.Login, *repo.Name)
 	// }
+
 }
 
 func (hub *GitHub) ListOrgRepos(org string)         { clog.Debug("called.") }
@@ -97,21 +122,12 @@ func ListPersonalRepos(client *github.Client, user string) error {
 	}
 	fmt.Printf("Total %d repos.\n", len(allRepos))
 
-	d, err := json.MarshalIndent(allRepos, "", "  ")
-	if err != nil {
-		fmt.Printf("json.MarshlIndent(allRepos) failed with %s\n", err)
-		return err
-	}
-
-	fmt.Printf("Repos:\n%s\n", string(d))
-	_ = d
-
-	for idx, repo := range allRepos {
-		fmt.Println(idx, *repo.Owner.Login, *repo.Name, *repo.CloneURL)
-		go ListBranches(client, *repo.Owner.Login, *repo.Name)
-	}
-
 	return nil
+
+	// for idx, repo := range allRepos {
+	// 	fmt.Println(idx, *repo.Owner.Login, *repo.Name, *repo.CloneURL)
+	// 	go ListBranches(client, *repo.Owner.Login, *repo.Name)
+	// }
 
 }
 

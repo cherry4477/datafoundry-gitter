@@ -38,24 +38,23 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			http.Redirect(w, r, "/authorize/github", http.StatusFound)
 			return
 		}
-		gitter := NewGitHub(tok)
-		if gitter == nil {
+		git = NewGitHub(tok)
+		if git == nil {
 			http.Redirect(w, r, "/authorize/github", http.StatusFound)
 			return
 		}
-		git = gitter
 	case "gitlab":
 		tok := loadGitLabToken(store, user)
 		if tok == nil {
 			clog.Errorf("can't load gitlab token for user %v, need redirect to authorize.", user)
 			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			return
 		}
-		gitter := NewGitLab(tok)
-		if gitter == nil {
+		git = NewGitLab(tok)
+		if git == nil {
 			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
 			return
 		}
-		git = gitter
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))
@@ -63,6 +62,7 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	git.ListPersonalRepos(user)
 }
+
 func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	handleMain(w, r, ps)
 }
