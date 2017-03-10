@@ -36,7 +36,7 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 }
 
 func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
-	clog.Debugf("list repos of %s called. on progress, nothing to show.", user)
+	// clog.Debugf("list repos of %s called.", user)
 
 	var allRepos []*gitlab.Project
 
@@ -55,7 +55,7 @@ func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
 			break
 		}
 		opt.ListOptions.Page = resp.NextPage
-		clog.Debugf("fetch next %d repos\n", resp.NextPage)
+		clog.Debugf("fetch next %v repos, page %v\n", opt.ListOptions.PerPage, resp.NextPage)
 	}
 	clog.Debugf("Total %d repos.\n", len(allRepos))
 

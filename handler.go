@@ -60,7 +60,8 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))
 		return
 	}
-	git.ListPersonalRepos(user)
+	repos := git.ListPersonalRepos(user)
+	RespOK(w, repos)
 }
 
 func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -83,10 +84,10 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	switch source {
 	case "github":
-		oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=abcde&user=zonesan"
+		oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=/repos/github&user=zonesan"
 		url = oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	case "gitlab":
-		oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=abcde&user=zonesan"
+		oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=/repos/gitlab&user=zonesan"
 		url = oauthConfGitLab.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	default:
 		w.WriteHeader(http.StatusNotFound)

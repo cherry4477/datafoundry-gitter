@@ -33,12 +33,13 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 }
 
 func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
-	clog.Debug("called.")
 
 	var allRepos []*github.Repository
+
 	opt := &github.RepositoryListOptions{
 		ListOptions: github.ListOptions{PerPage: 30},
 	}
+
 	for {
 		repos, resp, err := hub.client.Repositories.List("", opt)
 		if err != nil {
@@ -50,9 +51,9 @@ func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
 			break
 		}
 		opt.ListOptions.Page = resp.NextPage
-		clog.Debugf("fetch next %d repos\n", resp.NextPage)
+		clog.Debugf("fetch next %v repos, page %v\n", opt.ListOptions.PerPage, resp.NextPage)
 	}
-	fmt.Printf("Total %d repos.\n", len(allRepos))
+	clog.Debugf("Total %d repos.\n", len(allRepos))
 
 	hubRepos := new([]Repositories)
 

@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/crypto/ssh"
+	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func setBaseUrl(urlStr string) string {
@@ -32,11 +34,26 @@ func randToken() string {
 // }
 
 func debug(v interface{}) {
+	return
 	d, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		fmt.Printf("json.MarshlIndent() failed with %s\n", err)
 	}
 	fmt.Println(string(d))
+}
+
+func RespOK(w http.ResponseWriter, data interface{}) {
+	// if data == nil {
+	// 	data = genRespJson(nil)
+	// }
+
+	if body, err := json.MarshalIndent(data, "", "  "); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(body)
+	}
 }
 
 // rsa public and private keys
