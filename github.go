@@ -95,12 +95,42 @@ func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
 
 }
 
-func (hub *GitHub) ListOrgRepos(org string)         { clog.Debug("called.") }
-func (hub *GitHub) ListBranches(owner, repo string) { clog.Debug("called.") }
-func (hub *GitHub) ListTags(owner, repo string)     { clog.Debug("called.") }
-func (hub *GitHub) CreateWebhook(hook interface{})  { clog.Debug("called.") }
-func (hub *GitHub) RemoveWebhook(hook interface{})  { clog.Debug("called.") }
-func (hub *GitHub) CheckWebhook(hook interface{})   { clog.Debug("called.") }
+func (hub *GitHub) ListOrgRepos(org string) { clog.Debug("called.") }
+
+func (hub *GitHub) ListBranches(owner, repo string) *[]Branch {
+	var allBranches []*github.Branch
+	opt := &github.ListOptions{PerPage: 30}
+	for {
+		branches, resp, err := hub.client.Repositories.ListBranches(owner, repo, opt)
+		if err != nil {
+			clog.Error(err)
+			return nil
+		}
+		allBranches = append(allBranches, branches...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+		fmt.Printf("fetch next %v branches, page %v\n", opt.PerPage, resp.NextPage)
+	}
+
+	clog.Debugf("Total %d branches.\n", len(allBranches))
+
+	hubBranches := new([]Branch)
+	for _, v := range allBranches {
+		branch := new(Branch)
+		branch.Name = *v.Name
+		branch.CommitID = *v.Commit.SHA
+		*hubBranches = append(*hubBranches, *branch)
+	}
+
+	return hubBranches
+}
+
+func (hub *GitHub) ListTags(owner, repo string)    { clog.Debug("called.") }
+func (hub *GitHub) CreateWebhook(hook interface{}) { clog.Debug("called.") }
+func (hub *GitHub) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
+func (hub *GitHub) CheckWebhook(hook interface{})  { clog.Debug("called.") }
 
 func ListPersonalRepos(client *github.Client, user string) error {
 

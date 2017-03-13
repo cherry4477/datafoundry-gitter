@@ -18,20 +18,24 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", handleMain)
 
+	// authoriza handler
 	router.GET("/authorize/:source", handleGitterAuthorize)
 
-	// router.GET("/login", handleGitHubLogin)
-
-	// github callback handler
+	// callback handler
 	router.GET("/github_oauth_cb", handleGitHubCallback)
-
-	//gitlab callback handler
 	router.GET("/gitlab_oauth_cb", handleGitLabCallback)
-	router.GET("/repos/:source", handleRepos)
-	router.GET("/repos/:source/:repo/branches", handleRepoBranches)
-	router.GET("/repos/:source/:repo/webhook", handleCheckWebhook)
-	router.POST("/repos/:source/:repo/webhook", handleCreateWebhook)
-	router.DELETE("/repos/:source/:repo/webhook", handleRemoveWebhook)
+
+	// list repos handler
+	router.GET("/repos/github", handleGitHubRepos)
+	router.GET("/repos/gitlab", handleGitLabRepos)
+
+	//list repo branches handler
+	router.GET("/repos/github/:namespace/:repo/branches", handleGitHubRepoBranches)
+	router.GET("/repos/gitlab/projects/:repoid/branches", handleGitLabRepoBranches)
+
+	// router.GET("/repos/:source/:repo/webhook", handleCheckWebhook)
+	// router.POST("/repos/:source/:repo/webhook", handleCreateWebhook)
+	// router.DELETE("/repos/:source/:repo/webhook", handleRemoveWebhook)
 
 	clog.Debug("listening on port 7000 ...")
 	clog.Fatal(http.ListenAndServe(":7000", router))

@@ -94,9 +94,30 @@ func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
 
 }
 
-func (lab *GitLab) ListOrgRepos(org string)         { clog.Debug("called.") }
-func (lab *GitLab) ListBranches(owner, repo string) { clog.Debug("called.") }
-func (lab *GitLab) ListTags(owner, repo string)     { clog.Debug("called.") }
-func (lab *GitLab) CreateWebhook(hook interface{})  { clog.Debug("called.") }
-func (lab *GitLab) RemoveWebhook(hook interface{})  { clog.Debug("called.") }
-func (lab *GitLab) CheckWebhook(hook interface{})   { clog.Debug("called.") }
+func (lab *GitLab) ListOrgRepos(org string) { clog.Debug("called.") }
+
+func (lab *GitLab) ListBranches(owner, repo string) *[]Branch {
+	branches, resp, err := lab.client.Branches.ListBranches(repo)
+	_ = resp
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	clog.Debugf("total %v branches.", len(branches))
+
+	labBranches := new([]Branch)
+	for _, v := range branches {
+		branch := new(Branch)
+		branch.Name = v.Name
+		branch.CommitID = v.Commit.ID
+		*labBranches = append(*labBranches, *branch)
+	}
+
+	return labBranches
+
+}
+
+func (lab *GitLab) ListTags(owner, repo string)    { clog.Debug("called.") }
+func (lab *GitLab) CreateWebhook(hook interface{}) { clog.Debug("called.") }
+func (lab *GitLab) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
+func (lab *GitLab) CheckWebhook(hook interface{})  { clog.Debug("called.") }

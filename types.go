@@ -7,7 +7,7 @@ import (
 type Gitter interface {
 	ListPersonalRepos(user string) *[]Repositories
 	ListOrgRepos(org string)
-	ListBranches(owner, repo string)
+	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
 	CreateWebhook(hook interface{})
 	RemoveWebhook(hook interface{})
@@ -38,16 +38,13 @@ type Repository struct {
 	//Tags     []Tag    `json:"tags"`
 }
 
-//repo.HTTPURLToRepo, repo.Name, repo.Owner, repo.Public,
-//repo.SSHURLToRepo, repo.Namespace.Name)
-
 type Tag struct {
-	Name     string `json:"tag"`
+	Name     string `json:"name"`
 	CommitID string `json:"commitid"`
 }
 
 type Branch struct {
-	Name     string `json:"branch"`
+	Name     string `json:"name"`
 	CommitID string `json:"commitid"`
 }
 

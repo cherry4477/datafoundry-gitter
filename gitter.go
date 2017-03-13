@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
 )
@@ -73,4 +76,39 @@ func saveGitHubToken(store Storage, user string, tok *oauth2.Token) error {
 
 func exchangeToken(oauthConf *oauth2.Config, code string) (*oauth2.Token, error) {
 	return oauthConf.Exchange(oauth2.NoContext, code)
+}
+
+func newLabGitter(user string) (Gitter, error) {
+	tok := loadGitLabToken(store, user)
+	if tok == nil {
+		errStr := fmt.Sprintf("can't load gitlab token for user %v, need redirect to authorize.", user)
+		clog.Error(errStr)
+		return nil, errors.New(errStr)
+	}
+
+	gitter := NewGitLab(tok)
+	if gitter == nil {
+		errStr := fmt.Sprintf("empty Gitter returned, need authoriza.")
+		clog.Error(errStr)
+		return nil, errors.New(errStr)
+	}
+	return gitter, nil
+}
+
+func newHubGitter(user string) (Gitter, error) {
+	tok := loadGitHubToken(store, user)
+	if tok == nil {
+		errStr := fmt.Sprintf("can't load gitlab token for user %v, need redirect to authorize.", user)
+		clog.Error(errStr)
+		return nil, errors.New(errStr)
+	}
+
+	gitter := NewGitHub(tok)
+	if gitter == nil {
+		errStr := fmt.Sprintf("empty Gitter returned, need authoriza.")
+		clog.Error(errStr)
+		return nil, errors.New(errStr)
+	}
+	return gitter, nil
+
 }

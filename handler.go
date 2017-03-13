@@ -24,49 +24,64 @@ func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Write([]byte(htmlIndex))
 }
 
-func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	source := ps.ByName("source")
+func handleGitHubRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := "zonesan"
 
-	var git Gitter
-
-	switch source {
-	case "github":
-		tok := loadGitHubToken(store, user)
-		if tok == nil {
-			clog.Errorf("can't load github token for user %v, need redirect to authorize.", user)
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
-			return
-		}
-		git = NewGitHub(tok)
-		if git == nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
-			return
-		}
-	case "gitlab":
-		tok := loadGitLabToken(store, user)
-		if tok == nil {
-			clog.Errorf("can't load gitlab token for user %v, need redirect to authorize.", user)
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
-			return
-		}
-		git = NewGitLab(tok)
-		if git == nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
-			return
-		}
-	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+	git, err := newHubGitter(user)
+	if err != nil {
+		http.Redirect(w, r, "/authorize/github", http.StatusFound)
 		return
 	}
+
 	repos := git.ListPersonalRepos(user)
 	RespOK(w, repos)
+
 }
 
-func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	handleMain(w, r, ps)
+func handleGitLabRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	user := "zonesan"
+
+	git, err := newLabGitter(user)
+	if err != nil {
+		http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+		return
+	}
+
+	repos := git.ListPersonalRepos(user)
+	RespOK(w, repos)
+
 }
+
+func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	user := "zonesan"
+	id := ps.ByName("repoid")
+
+	git, err := newLabGitter(user)
+	if err != nil {
+		http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+		return
+	}
+
+	branches := git.ListBranches("", id)
+	RespOK(w, branches)
+
+}
+
+func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	user := "zonesan"
+	ns, repo := ps.ByName("namespace"), ps.ByName("repo")
+
+	git, err := newHubGitter(user)
+	if err != nil {
+		http.Redirect(w, r, "/authorize/github", http.StatusFound)
+		return
+	}
+
+	branches := git.ListBranches(ns, repo)
+
+	RespOK(w, branches)
+}
+
 func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	handleMain(w, r, ps)
 }
@@ -98,13 +113,6 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-// /login
-// func handleGitHubLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-// 	oauthConf.RedirectURL = "http://localhost:7000/github_oauth_cb?redirect_url=abcde&user=zonesan"
-// 	url := oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
-// 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-// }
-
 // /github_oauth_cb. Called by github after authorization is granted
 func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	redirect_url, user, token, err := callbackValidate(w, r, oauthConf)
@@ -121,30 +129,10 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 
 	http.Redirect(w, r, redirect_url, http.StatusFound)
 
-	// go func() {
-	// 	var user string = "zonesan"
-	// 	UserProfile(client, user)
-	// 	//ListPersonalRepos(client, user)
-	// 	//ListOrgRepos(client)
-	// }()
-
-	// http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 // /github_oauth_cb. Called by github after authorization is granted
 func handleGitLabCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// redirect_url := r.FormValue("redirect_url")
-	// user := r.FormValue("user")
-	// state := r.FormValue("state")
-	// code := r.FormValue("code")
-
-	// clog.Debug("user:", user, "redirect_url:", redirect_url, "state:", state, "code:", code)
-
-	// if state != oauthStateString {
-	// 	fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
-	// 	http.Redirect(w, r, "/", http.StatusFound)
-	// 	return
-	// }
 
 	redirect_url, user, token, err := callbackValidate(w, r, oauthConfGitLab)
 	// token, err := exchangeToken(oauthConfGitLab, code)
@@ -159,27 +147,6 @@ func handleGitLabCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 	}
 
 	http.Redirect(w, r, redirect_url, http.StatusFound)
-
-	// oauthClient := oauthConfGitLab.Client(oauth2.NoContext, token)
-	// client := gitlab.NewOAuthClient(oauthClient, token.AccessToken)
-	// client.SetBaseURL(gitlabBaseUrl + "/api/v3")
-	// //do something.
-
-	// clog.Debug(token)
-
-	// go func() {
-	// 	a, b, c := client.Users.CurrentUser()
-	// 	clog.Debug("user:", a, b, c)
-	// 	//ListPersonalRepos(client, user)
-	// 	//ListOrgRepos(client)
-	// 	//opt := &gitlab.ListProjectsOptions{}
-	// 	d, e, f := client.Projects.ListProjects(nil)
-	// 	clog.Debug("project", d, e, f)
-
-	// 	session, resp, err := client.Session.GetSession(nil)
-	// 	clog.Debugf("session", session, resp, err)
-
-	// }()
 
 }
 
