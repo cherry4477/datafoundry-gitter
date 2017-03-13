@@ -54,7 +54,7 @@ func handleGitLabRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := "zonesan"
-	id := ps.ByName("repoid")
+	id := r.FormValue("id")
 
 	git, err := newLabGitter(user)
 	if err != nil {
@@ -69,7 +69,7 @@ func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprou
 
 func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := "zonesan"
-	ns, repo := ps.ByName("namespace"), ps.ByName("repo")
+	namespace, repo := r.FormValue("ns"), r.FormValue("repo")
 
 	git, err := newHubGitter(user)
 	if err != nil {
@@ -77,18 +77,51 @@ func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	branches := git.ListBranches(ns, repo)
+	branches := git.ListBranches(namespace, repo)
 
 	RespOK(w, branches)
 }
 
-func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func handleGitHubCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	user := "zonesan"
+	// namespace, repo := r.FormValue("namespace"), r.FormValue("repo")
+	// if len(namespace) == 0 || len(repo) == 0 {
+	// 	w.WriteHeader(http.StatusNotFound)
+	// 	w.Write([]byte(http.StatusText(http.StatusNotFound)))
+	// 	return
+	// }
+	ns, bc := r.FormValue("ns"), r.FormValue("bc")
+
+	git, err := newHubGitter(user)
+	if err != nil {
+		http.Redirect(w, r, "/authorize/github", http.StatusFound)
+		return
+	}
+	hook := git.CheckWebhook(ns, bc)
+	RespOK(w, hook)
+}
+
+func handleGitHubCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
 	handleMain(w, r, ps)
 }
-func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func handleGitHubRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	handleMain(w, r, ps)
 }
-func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+func handleGitLabCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns, bc := r.FormValue("ns"), r.FormValue("bc")
+	if len(ns) == 0 || len(bc) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		return
+	}
+	handleMain(w, r, ps)
+}
+func handleGitLabCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	handleMain(w, r, ps)
+}
+func handleGitLabRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	handleMain(w, r, ps)
 }
 

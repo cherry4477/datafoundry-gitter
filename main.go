@@ -29,13 +29,21 @@ func main() {
 	router.GET("/repos/github", handleGitHubRepos)
 	router.GET("/repos/gitlab", handleGitLabRepos)
 
-	//list repo branches handler
-	router.GET("/repos/github/:namespace/:repo/branches", handleGitHubRepoBranches)
-	router.GET("/repos/gitlab/projects/:repoid/branches", handleGitLabRepoBranches)
+	// list repo branches handler
+	router.GET("/repos/github/branches", handleGitHubRepoBranches)
+	router.GET("/repos/gitlab/branches", handleGitLabRepoBranches)
 
-	// router.GET("/repos/:source/:repo/webhook", handleCheckWebhook)
-	// router.POST("/repos/:source/:repo/webhook", handleCreateWebhook)
-	// router.DELETE("/repos/:source/:repo/webhook", handleRemoveWebhook)
+	// webhhook handler
+	router.GET("/repos/github/webhook", handleGitHubCheckWebhook)
+	router.POST("/repos/github/webhook", handleGitHubCreateWebhook)
+	router.DELETE("/repos/github/webhook/:hookid", handleGitHubRemoveWebhook)
+	router.GET("/repos/gitlab/webhook", handleGitLabCheckWebhook)
+	router.POST("/repos/gitlab/webhook", handleGitLabCreateWebhook)
+	router.DELETE("/repos/gitlab/webhook/:hookid", handleGitLabRemoveWebhook)
+
+	// router.GET("/repos/:source", handleGitLabRepos)
+	// router.GET("/repos/:source/branch", handleGitLabRepos)
+	// router.GET("/repos/:source/webhook", handleGitLabRepos)
 
 	clog.Debug("listening on port 7000 ...")
 	clog.Fatal(http.ListenAndServe(":7000", router))

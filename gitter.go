@@ -38,10 +38,10 @@ func removeWebhook(gitter Gitter, hook interface{}) {
 	gitter.RemoveWebhook(hook)
 }
 
-func checkWebhook(gitter Gitter, hook interface{}) {
-	clog.Debug("checkWebhook interface")
-	gitter.CheckWebhook(hook)
-}
+// func checkWebhook(gitter Gitter, hook interface{}) {
+// 	clog.Debug("checkWebhook interface")
+// 	gitter.CheckWebhook(hook)
+// }
 
 // func loadToken(gitter Gitter) (*oauth2.Token, error) {
 // 	clog.Debug("loadToken interface")

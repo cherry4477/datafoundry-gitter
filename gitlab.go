@@ -120,4 +120,7 @@ func (lab *GitLab) ListBranches(owner, repo string) *[]Branch {
 func (lab *GitLab) ListTags(owner, repo string)    { clog.Debug("called.") }
 func (lab *GitLab) CreateWebhook(hook interface{}) { clog.Debug("called.") }
 func (lab *GitLab) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
-func (lab *GitLab) CheckWebhook(hook interface{})  { clog.Debug("called.") }
+func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
+	clog.Debug("called.")
+	return nil
+}

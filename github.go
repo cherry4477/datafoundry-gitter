@@ -130,7 +130,10 @@ func (hub *GitHub) ListBranches(owner, repo string) *[]Branch {
 func (hub *GitHub) ListTags(owner, repo string)    { clog.Debug("called.") }
 func (hub *GitHub) CreateWebhook(hook interface{}) { clog.Debug("called.") }
 func (hub *GitHub) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
-func (hub *GitHub) CheckWebhook(hook interface{})  { clog.Debug("called.") }
+func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
+	clog.Debug("called.")
+	return nil
+}
 
 func ListPersonalRepos(client *github.Client, user string) error {
 

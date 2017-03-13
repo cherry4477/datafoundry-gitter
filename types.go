@@ -11,7 +11,7 @@ type Gitter interface {
 	ListTags(owner, repo string)
 	CreateWebhook(hook interface{})
 	RemoveWebhook(hook interface{})
-	CheckWebhook(hook interface{})
+	CheckWebhook(ns, bc string) *WebHook
 	// SaveToken(tok *oauth2.Token) error
 	// LoadToken() (*oauth2.Token, error)
 }
@@ -46,6 +46,14 @@ type Tag struct {
 type Branch struct {
 	Name     string `json:"name"`
 	CommitID string `json:"commitid"`
+}
+
+type WebHook struct {
+	ID  int    `json:"id"`
+	URL string `json:"url"`
+	// namespace + '/' + buildconfig
+	Name   string                 `json:"name"`
+	Params map[string]interface{} `json:"params"`
 }
 
 /*

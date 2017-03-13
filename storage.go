@@ -8,6 +8,8 @@ import (
 var labStore = make(map[string]*oauth2.Token)
 var hubStore = make(map[string]*oauth2.Token)
 
+var hookStore = make(map[string]*WebHook)
+
 type Storage interface {
 	LoadTokenGitlab(user string) *oauth2.Token
 	SaveTokenGitlab(user string, tok *oauth2.Token) error
