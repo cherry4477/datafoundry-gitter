@@ -50,6 +50,7 @@ func init() {
 	// redis
 	var redisParams = os.Getenv("REDIS_SERVER_PARAMS")
 	if redisParams != "" {
+		// host+port+password
 		var words = strings.Split(redisParams, "+")
 		if len(words) < 3 {
 			clog.Fatalf("REDIS_SERVER_PARAMS (%s) should have 3 params, now: %d", redisParams, len(words))
@@ -58,7 +59,8 @@ func init() {
 		store = NewRedisStorage(
 			words[0] + ":" +  words[1],
 			"", // blank clusterName means no sentinel servers
-			strings.Join(words[2:], "+"),
+			strings.Join(words[2:], "+", // password
+			),
 		)
 	} else {
 		const RedisServiceKindName = "Redis"
