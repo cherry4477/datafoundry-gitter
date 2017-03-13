@@ -24,6 +24,35 @@ func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Write([]byte(htmlIndex))
 }
 
+func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	source := ps.ByName("source")
+	user := "zonesan"
+
+	var git Gitter
+	var err error
+
+	switch source {
+	case "github":
+		git, err = newHubGitter(user)
+		if err != nil {
+			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			return
+		}
+	case "gitlab":
+		git, err = newLabGitter(user)
+		if err != nil {
+			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		return
+	}
+	repos := git.ListPersonalRepos(user)
+	RespOK(w, repos)
+}
+
 func handleGitHubRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	user := "zonesan"
 
