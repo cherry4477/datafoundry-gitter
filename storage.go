@@ -3,13 +3,22 @@ package main
 import (
 	"fmt"
 	"time"
+	"encoding/json"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
 	"github.com/garyburd/redigo/redis"
 )
 
-var labStore = make(map[string]*oauth2.Token)
-var hubStore = make(map[string]*oauth2.Token)
+func gitlabUserAuthTokenKey(user string) string {
+	return "gitlab/oauthtoken/" + user
+}
+func githubUserAuthTokenKey(user string) string {
+	return "github/oauthtoken/" + user
+}
+
+//=======================================================
+// Storage
+//=======================================================
 
 type Storage interface {
 	LoadTokenGitlab(user string) *oauth2.Token
@@ -18,13 +27,136 @@ type Storage interface {
 	SaveTokenGithub(user string, tok *oauth2.Token) error
 }
 
-type RedisStore struct {
-	pool    *redis.Pool
+type KeyValueStorager interface {
+	Set(key string, value []byte) error
+	Get(key string) ([]byte, error)
+	//List(keyPrefix string)(<-chan struct{key, value []byte}, chan<- struct{})
+	Delete(key string) error
+}
+
+func NewStorage(kv KeyValueStorager) Storage {
+	return &storage{kv}
+}
+
+//=======================================================
+// KeyValueStorage
+//=======================================================
+
+type storage struct {
+	KeyValueStorager
+}
+
+func (s *storage) LoadTokenGitlab(user string) *oauth2.Token {
+	userKey := gitlabUserAuthTokenKey(user)
+
+	data, err := s.Get(userKey)
+	if err == nil {
+		clog.Debugf("get gitlab user (%s) auth token error: %s", user, err)
+		return nil
+	}
+
+	var t = &oauth2.Token{}
+	err = json.Unmarshal(data, t)
+	if err == nil {
+		clog.Debugf("unmarshal gitlab user (%s) auth token (%s) error: %s", user, string(data), err)
+		return nil
+	}
+
+	return t
+}
+
+func (s *storage) SaveTokenGitlab(user string, tok *oauth2.Token) error {
+	data, err := json.Marshal(tok)
+	if err == nil {
+		clog.Debugf("marshal gitlab user (%s) auth token (%v) error: %s", user, tok, err)
+		return err
+	}
+
+	userKey := gitlabUserAuthTokenKey(user)
+
+	err = s.Set(userKey, data)
+	if err != nil {
+		clog.Debugf("set gitlab user (%s) auth token error: %s", user, err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *storage) LoadTokenGithub(user string) *oauth2.Token {
+	userKey := githubUserAuthTokenKey(user)
+
+	data, err := s.Get(userKey)
+	if err == nil {
+		clog.Debugf("get gitlab user (%s) auth token error: %s", user, err)
+		return nil
+	}
+
+	var t = &oauth2.Token{}
+	err = json.Unmarshal(data, t)
+	if err == nil {
+		clog.Debugf("unmarshal gitlab user (%s) auth token (%s) error: %s", user, string(data), err)
+		return nil
+	}
+
+	return t
+}
+
+func (s *storage) SaveTokenGithub(user string, tok *oauth2.Token) error {
+	data, err := json.Marshal(tok)
+	if err == nil {
+		clog.Debugf("marshal gitlab user (%s) auth token (%v) error: %s", user, tok, err)
+		return err
+	}
+
+	userKey := githubUserAuthTokenKey(user)
+
+	err = s.Set(userKey, data)
+	if err != nil {
+		clog.Debugf("set gitlab user (%s) auth token error: %s", user, err)
+		return err
+	}
+
+	return nil
+}
+
+//=======================================================
+// memory kv
+//=======================================================
+
+type memoryStorager struct {
+	m map[string][]byte
+}
+
+func NewMemoryKeyValueStorager() KeyValueStorager {
+	return &memoryStorager{map[string][]byte{}}
+}
+
+func (ms *memoryStorager) Set(key string, value []byte) error {
+	ms.m[key] = value
+	return nil
+}
+
+func (ms *memoryStorager) Get(key string) ([]byte, error) {
+	return ms.m[key], nil
+}
+
+func (ms *memoryStorager) Delete(key string) error {
+	delete(ms.m, key)
+	return nil
+}
+
+//=======================================================
+// redis kv
+//=======================================================
+
+type redisStorager struct {
+	pool *redis.Pool
 }
 
 // addr format is host:port.
 // clusterName is blank means addr is the master address, otherwise addr is sentinel address.
-func NewRedisStorage(addr, clusterName, password string) *RedisStore {
+func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorager {
 	var p = &redis.Pool{
 		MaxIdle:     10,
 		MaxActive:   10,
@@ -71,7 +203,7 @@ func NewRedisStorage(addr, clusterName, password string) *RedisStore {
 			}
 			if password != "" {
 				if _, err := c.Do("AUTH", password); err != nil {
-					clog.Errorf("redis master (%s) AUTH error: %s", addr, err)
+					clog.Errorf("redis master (%s) AUTH (%s) error: %s", addr, password, err)
 					c.Close()
 					return nil, err
 				}
@@ -84,27 +216,42 @@ func NewRedisStorage(addr, clusterName, password string) *RedisStore {
 		},
 	}
 	
-	return &RedisStore{pool: p}
+	return &redisStorager{pool: p}
 }
 
-func (rs *RedisStore) LoadTokenGitlab(user string) *oauth2.Token {
-	clog.Debug("loading user:", user)
-	return labStore[user]
-}
+func (ms *redisStorager) Set(key string, value []byte) error {
+	c := ms.pool.Get()
+	defer c.Close()
 
-func (rs *RedisStore) SaveTokenGitlab(user string, tok *oauth2.Token) error {
-	clog.Debugf("%v: %#v", user, tok)
-	labStore[user] = tok
+	if _, err := c.Do("SET", key, value); err != nil {
+		clog.Error("[SET] err :", err)
+		return err
+	}
+
 	return nil
 }
 
-func (rs *RedisStore) LoadTokenGithub(user string) *oauth2.Token {
-	clog.Debug("called.")
-	return hubStore[user]
+func (ms *redisStorager) Get(key string) ([]byte, error) {
+	c := ms.pool.Get()
+	defer c.Close()
+
+	b, err := redis.Bytes(c.Do("GET", key))
+	if err != nil && err != redis.ErrNil {
+		clog.Error("[GET] err:", err)
+		return nil, err
+	}
+
+	return b, nil
 }
 
-func (rs *RedisStore) SaveTokenGithub(user string, tok *oauth2.Token) error {
-	clog.Debug("called.")
-	hubStore[user] = tok
+func (ms *redisStorager) Delete(key string) error {
+	c := ms.pool.Get()
+	defer c.Close()
+
+	if _, err := c.Do("DEL", key); err != nil {
+		clog.Error("[DEL] err:", err)
+		return err
+	}
+
 	return nil
 }
