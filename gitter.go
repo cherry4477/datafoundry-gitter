@@ -8,9 +8,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func listPersonalRepos(gitter Gitter, user string) {
+func listPersonalRepos(gitter Gitter, user string) *[]Repositories {
 	clog.Debug("listPersonalRepos interface")
-	gitter.ListPersonalRepos(user)
+	return gitter.ListPersonalRepos(user)
 }
 
 func listOrgRepos(gitter Gitter, org string) {
@@ -18,9 +18,9 @@ func listOrgRepos(gitter Gitter, org string) {
 	gitter.ListOrgRepos(org)
 }
 
-func listBranches(gitter Gitter, owner, repo string) {
+func listBranches(gitter Gitter, owner, repo string) *[]Branch {
 	clog.Debug("listBranches interface")
-	gitter.ListBranches(owner, repo)
+	return gitter.ListBranches(owner, repo)
 }
 
 func listTags(gitter Gitter, owner, repo string) {
@@ -28,14 +28,19 @@ func listTags(gitter Gitter, owner, repo string) {
 	gitter.ListTags(owner, repo)
 }
 
-func createWebhook(gitter Gitter, hook interface{}) {
+func createWebhook(gitter Gitter, hook *WebHook) *WebHook {
 	clog.Debug("createWebhook interface")
-	gitter.CreateWebhook(hook)
+	return gitter.CreateWebhook(hook)
 }
 
-func removeWebhook(gitter Gitter, hook interface{}) {
+func checkWebhook(gitter Gitter, ns, bc string) *WebHook {
+	clog.Debug("checkWebhook interface")
+	return gitter.CheckWebhook(ns, bc)
+}
+
+func removeWebhook(gitter Gitter, key string) {
 	clog.Debug("removeWebhook interface")
-	gitter.RemoveWebhook(hook)
+	gitter.RemoveWebhook(key)
 }
 
 // func checkWebhook(gitter Gitter, hook interface{}) {
@@ -55,7 +60,12 @@ func removeWebhook(gitter Gitter, hook interface{}) {
 
 func loadGitLabToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitLabToken interface")
-	return store.LoadTokenGitlab(user)
+	tok, err := store.LoadTokenGitlab(user)
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	return tok
 }
 
 func saveGitLabToken(store Storage, user string, tok *oauth2.Token) error {
@@ -66,7 +76,12 @@ func saveGitLabToken(store Storage, user string, tok *oauth2.Token) error {
 
 func loadGitHubToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitHubToken interface")
-	return store.LoadTokenGithub(user)
+	tok, err := store.LoadTokenGithub(user)
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	return tok
 }
 
 func saveGitHubToken(store Storage, user string, tok *oauth2.Token) error {

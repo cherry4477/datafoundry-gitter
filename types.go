@@ -9,8 +9,8 @@ type Gitter interface {
 	ListOrgRepos(org string)
 	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
-	CreateWebhook(hook interface{})
-	RemoveWebhook(hook interface{})
+	CreateWebhook(hook *WebHook) *WebHook
+	RemoveWebhook(key string) error
 	CheckWebhook(ns, bc string) *WebHook
 	// SaveToken(tok *oauth2.Token) error
 	// LoadToken() (*oauth2.Token, error)
@@ -49,11 +49,27 @@ type Branch struct {
 }
 
 type WebHook struct {
-	ID  int    `json:"id"`
-	URL string `json:"url"`
+	ID int `json:"id"`
 	// namespace + '/' + buildconfig
-	Name   string                 `json:"name"`
-	Params map[string]interface{} `json:"params"`
+	Name      string `json:"name,omitempty"`
+	Source    string `json:"source,omitempty"`
+	hookParam `json:"params"`
+}
+
+type hookParam struct {
+	Ns   string `json:"ns,omitempty"`
+	Repo string `json:"repo,omitempty"`
+	Pid  string `json:"id,omitempty"`
+	URL  string `json:"url"`
+}
+
+var (
+	yes = true
+	no  = false
+)
+
+func enable(b bool) *bool {
+	return &b
 }
 
 /*

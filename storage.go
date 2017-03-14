@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"github.com/garyburd/redigo/redis"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
-	"github.com/garyburd/redigo/redis"
+	"time"
 )
 
 var labStore = make(map[string]*oauth2.Token)
@@ -14,14 +14,17 @@ var hubStore = make(map[string]*oauth2.Token)
 var hookStore = make(map[string]*WebHook)
 
 type Storage interface {
-	LoadTokenGitlab(user string) *oauth2.Token
+	LoadTokenGitlab(user string) (*oauth2.Token, error)
 	SaveTokenGitlab(user string, tok *oauth2.Token) error
-	LoadTokenGithub(user string) *oauth2.Token
+	LoadTokenGithub(user string) (*oauth2.Token, error)
 	SaveTokenGithub(user string, tok *oauth2.Token) error
+	GetWebHook(key string) (*WebHook, error)
+	CreateWebHook(key string, hook *WebHook) error
+	DeleteWebHook(key string) error
 }
 
 type RedisStore struct {
-	pool    *redis.Pool
+	pool *redis.Pool
 }
 
 // addr format is host:port.
@@ -59,7 +62,7 @@ func NewRedisStorage(addr, clusterName, password string) *RedisStore {
 					masterAddr = redisMasterPair[0] + ":" + redisMasterPair[1]
 					return nil
 				}()
-				
+
 				if err != nil {
 					return nil, err
 				}
@@ -85,13 +88,13 @@ func NewRedisStorage(addr, clusterName, password string) *RedisStore {
 			return err
 		},
 	}
-	
+
 	return &RedisStore{pool: p}
 }
 
-func (rs *RedisStore) LoadTokenGitlab(user string) *oauth2.Token {
+func (rs *RedisStore) LoadTokenGitlab(user string) (*oauth2.Token, error) {
 	clog.Debug("loading user:", user)
-	return labStore[user]
+	return labStore[user], nil
 }
 
 func (rs *RedisStore) SaveTokenGitlab(user string, tok *oauth2.Token) error {
@@ -100,13 +103,26 @@ func (rs *RedisStore) SaveTokenGitlab(user string, tok *oauth2.Token) error {
 	return nil
 }
 
-func (rs *RedisStore) LoadTokenGithub(user string) *oauth2.Token {
+func (rs *RedisStore) LoadTokenGithub(user string) (*oauth2.Token, error) {
 	clog.Debug("called.")
-	return hubStore[user]
+	return hubStore[user], nil
 }
 
 func (rs *RedisStore) SaveTokenGithub(user string, tok *oauth2.Token) error {
 	clog.Debug("called.")
 	hubStore[user] = tok
+	return nil
+}
+
+func (rs *RedisStore) GetWebHook(key string) (*WebHook, error) {
+	return hookStore[key], nil
+}
+
+func (rs *RedisStore) CreateWebHook(key string, hook *WebHook) error {
+	hookStore[key] = hook
+	return nil
+}
+func (rs *RedisStore) DeleteWebHook(key string) error {
+	delete(hookStore, key)
 	return nil
 }

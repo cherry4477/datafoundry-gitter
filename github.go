@@ -11,7 +11,9 @@ import (
 )
 
 type GitHub struct {
-	client *github.Client
+	client    *github.Client
+	namespace string
+	repo      string
 }
 
 func NewGitHub(tok *oauth2.Token) *GitHub {
@@ -127,9 +129,15 @@ func (hub *GitHub) ListBranches(owner, repo string) *[]Branch {
 	return hubBranches
 }
 
-func (hub *GitHub) ListTags(owner, repo string)    { clog.Debug("called.") }
-func (hub *GitHub) CreateWebhook(hook interface{}) { clog.Debug("called.") }
-func (hub *GitHub) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
+func (hub *GitHub) ListTags(owner, repo string) { clog.Debug("called.") }
+func (hub *GitHub) CreateWebhook(hook *WebHook) *WebHook {
+	clog.Debug("called.")
+	return nil
+}
+func (hub *GitHub) RemoveWebhook(key string) error {
+	clog.Debug("called.")
+	return nil
+}
 func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
 	clog.Debug("called.")
 	return nil
