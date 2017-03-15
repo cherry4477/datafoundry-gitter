@@ -8,6 +8,7 @@ import (
 
 type GitLab struct {
 	client *gitlab.Client
+	repoid string
 }
 
 func NewGitLab(tok *oauth2.Token) *GitLab {
@@ -117,7 +118,40 @@ func (lab *GitLab) ListBranches(owner, repo string) *[]Branch {
 
 }
 
-func (lab *GitLab) ListTags(owner, repo string)    { clog.Debug("called.") }
-func (lab *GitLab) CreateWebhook(hook interface{}) { clog.Debug("called.") }
-func (lab *GitLab) RemoveWebhook(hook interface{}) { clog.Debug("called.") }
-func (lab *GitLab) CheckWebhook(hook interface{})  { clog.Debug("called.") }
+func (lab *GitLab) ListTags(owner, repo string) { clog.Debug("called.") }
+func (lab *GitLab) CreateWebhook(hook *WebHook) *WebHook {
+	clog.Debugf("hook info: %#v", hook)
+	opt := &gitlab.AddProjectHookOptions{
+		URL:                   &hook.URL,
+		PushEvents:            enable(yes),
+		TagPushEvents:         enable(yes),
+		EnableSSLVerification: enable(no),
+	}
+	labhook, resp, err := lab.client.Projects.AddProjectHook(hook.Pid, opt)
+	_ = resp
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	hook.ID = labhook.ID
+	{
+		store.CreateWebHook(hook.Name, hook)
+	}
+	return hook
+}
+
+func (lab *GitLab) RemoveWebhook(key string) error {
+	clog.Debug("called.")
+	return nil
+}
+
+func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
+	clog.Debug("called.")
+	key := ns + "/" + bc
+	hook, err := store.GetWebHook(key)
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	return hook
+}

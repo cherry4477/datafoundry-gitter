@@ -8,10 +8,12 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/zonesan/clog"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -110,4 +112,18 @@ func generateKeyPair() (privateKey, publicKey string, err error) {
 	//println("public:", publicKey)
 
 	return
+}
+
+func parseRequestBody(r *http.Request, v interface{}) error {
+	b, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		return err
+	}
+	clog.Debug("Request Body:", string(b))
+	if err := json.Unmarshal(b, v); err != nil {
+		return err
+	}
+
+	return nil
 }

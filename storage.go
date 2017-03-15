@@ -15,16 +15,22 @@ func gitlabUserAuthTokenKey(user string) string {
 func githubUserAuthTokenKey(user string) string {
 	return "github/oauthtoken/" + user
 }
+func webhookKey(key string) string {
+	return "webhook/" + key
+}
 
 //=======================================================
 // Storage
 //=======================================================
 
 type Storage interface {
-	LoadTokenGitlab(user string) *oauth2.Token
+	LoadTokenGitlab(user string) (*oauth2.Token, error)
 	SaveTokenGitlab(user string, tok *oauth2.Token) error
-	LoadTokenGithub(user string) *oauth2.Token
+	LoadTokenGithub(user string) (*oauth2.Token, error)
 	SaveTokenGithub(user string, tok *oauth2.Token) error
+	GetWebHook(webhook string) (*WebHook, error)
+	CreateWebHook(webhook string, hook *WebHook) error
+	DeleteWebHook(webhook string) error
 }
 
 type KeyValueStorager interface {
@@ -46,78 +52,79 @@ type storage struct {
 	KeyValueStorager
 }
 
-func (s *storage) LoadTokenGitlab(user string) *oauth2.Token {
-	userKey := gitlabUserAuthTokenKey(user)
-
-	data, err := s.Get(userKey)
-	if err == nil {
-		clog.Debugf("get gitlab user (%s) auth token error: %s", user, err)
-		return nil
+func (s *storage) Load(key string, into interface{}) error {
+	data, err := s.Get(key)
+	if err != nil {
+		clog.Debugf("load (%s) error: %s", key, err)
+		return err
 	}
 
-	var t = &oauth2.Token{}
-	err = json.Unmarshal(data, t)
-	if err == nil {
-		clog.Debugf("unmarshal gitlab user (%s) auth token (%s) error: %s", user, string(data), err)
-		return nil
+	err = json.Unmarshal(data, into)
+	if err != nil {
+		clog.Debugf("unmarshal (%s) data (%s) error: %s", key, string(data), err)
+		return err
 	}
 
-	return t
+	return nil
+}
+
+func (s *storage) Save(key string, obj interface{}) error {
+	data, err := json.Marshal(obj)
+	if err != nil {
+		clog.Debugf("marshal (%s) auth token (%v) error: %s", key, obj, err)
+		return err
+	}
+
+	err = s.Set(key, data)
+	if err != nil {
+		clog.Debugf("save (%s) error: %s", key, err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *storage) LoadTokenGitlab(user string) (*oauth2.Token, error) {
+	var token = &oauth2.Token{}
+	if err := s.Load(gitlabUserAuthTokenKey(user), token); err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
 func (s *storage) SaveTokenGitlab(user string, tok *oauth2.Token) error {
-	data, err := json.Marshal(tok)
-	if err == nil {
-		clog.Debugf("marshal gitlab user (%s) auth token (%v) error: %s", user, tok, err)
-		return err
-	}
-
-	userKey := gitlabUserAuthTokenKey(user)
-
-	err = s.Set(userKey, data)
-	if err != nil {
-		clog.Debugf("set gitlab user (%s) auth token error: %s", user, err)
-		return err
-	}
-
-	return nil
+	return s.Save(gitlabUserAuthTokenKey(user), tok)
 }
 
-func (s *storage) LoadTokenGithub(user string) *oauth2.Token {
-	userKey := githubUserAuthTokenKey(user)
-
-	data, err := s.Get(userKey)
-	if err == nil {
-		clog.Debugf("get gitlab user (%s) auth token error: %s", user, err)
-		return nil
+func (s *storage) LoadTokenGithub(user string) (*oauth2.Token, error) {
+	var token = &oauth2.Token{}
+	if err := s.Load(gitlabUserAuthTokenKey(user), token); err != nil {
+		return nil, err
 	}
 
-	var t = &oauth2.Token{}
-	err = json.Unmarshal(data, t)
-	if err == nil {
-		clog.Debugf("unmarshal gitlab user (%s) auth token (%s) error: %s", user, string(data), err)
-		return nil
-	}
-
-	return t
+	return token, nil
 }
 
 func (s *storage) SaveTokenGithub(user string, tok *oauth2.Token) error {
-	data, err := json.Marshal(tok)
-	if err == nil {
-		clog.Debugf("marshal gitlab user (%s) auth token (%v) error: %s", user, tok, err)
-		return err
+	return s.Save(githubUserAuthTokenKey(user), tok)
+}
+
+func (s *storage) GetWebHook(webhook string) (*WebHook, error) {
+	var hook = &WebHook{}
+	if err := s.Load(webhookKey(webhook), hook); err != nil {
+		return nil, err
 	}
 
-	userKey := githubUserAuthTokenKey(user)
+	return hook, nil
+}
 
-	err = s.Set(userKey, data)
-	if err != nil {
-		clog.Debugf("set gitlab user (%s) auth token error: %s", user, err)
-		return err
-	}
+func (s *storage) CreateWebHook(webhook string, hook *WebHook) error {
+	return s.Save(webhookKey(webhook), hook)
+}
 
-	return nil
+func (s *storage) DeleteWebHook(webhook string) error {
+	return s.Delete(webhookKey(webhook))
 }
 
 //=======================================================
