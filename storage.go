@@ -32,6 +32,7 @@ type Storage interface {
 	CreateWebHook(webhook string, hook *WebHook) error
 	DeleteWebHook(webhook string) error
 }
+var _ Storage = &storage{}
 
 type KeyValueStorager interface {
 	Set(key string, value []byte) error
@@ -39,6 +40,8 @@ type KeyValueStorager interface {
 	//List(keyPrefix string)(<-chan struct{key, value []byte}, chan<- struct{})
 	Delete(key string) error
 }
+var _ KeyValueStorager = &memoryStorager{}
+var _ KeyValueStorager = &redisStorager{}
 
 func NewStorage(kv KeyValueStorager) Storage {
 	return &storage{kv}
@@ -83,6 +86,8 @@ func (s *storage) Save(key string, obj interface{}) error {
 
 	return nil
 }
+
+//========== implements Storage interface
 
 func (s *storage) LoadTokenGitlab(user string) (*oauth2.Token, error) {
 	var token = &oauth2.Token{}
@@ -174,6 +179,7 @@ func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorag
 			if clusterName == "" {
 				masterAddr = addr
 			} else {
+				// query master addr from sentinel
 				err := func() error {
 					conn, err := redis.DialTimeout("tcp", addr, time.Second*10, time.Second*10, time.Second*10)
 					if err != nil {
