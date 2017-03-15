@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -11,13 +12,17 @@ import (
 )
 
 type GitHub struct {
-	client    *github.Client
-	namespace string
-	repo      string
+	client *github.Client
+	source string
+	owner  string
+	repo   string
+	ns     string
+	bc     string
 }
 
 func NewGitHub(tok *oauth2.Token) *GitHub {
 	hub := new(GitHub)
+	hub.source = "github"
 
 	// token, err := oauthConfGitLab.TokenSource(oauth2.NoContext, tok).Token()
 	// if err != nil {
@@ -131,16 +136,83 @@ func (hub *GitHub) ListBranches(owner, repo string) *[]Branch {
 
 func (hub *GitHub) ListTags(owner, repo string) { clog.Debug("called.") }
 func (hub *GitHub) CreateWebhook(hook *WebHook) *WebHook {
-	clog.Debug("called.")
-	return nil
+
+	clog.Debugf("hook info: %#v", hook)
+
+	exist, err := store.GetWebHook(hook.Name)
+	if exist != nil {
+		return exist
+	}
+
+	hook.Source = hub.source
+	hook.Pid = ""
+
+	hookname := "web"
+
+	hubhook := new(github.Hook)
+
+	hubhook.Active = enable(yes)
+	hubhook.Name = &hookname
+	hubhook.Config = make(map[string]interface{})
+	hubhook.Config["url"] = hook.URL
+	hubhook.Config["content_type"] = "json"
+	hubhook.Config["insecure_ssl"] = "1"
+
+	hubhook, resp, err := hub.client.Repositories.CreateHook(hook.Ns, hook.Repo, hubhook)
+	_ = resp
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	hook.ID = *hubhook.ID
+	{
+		store.CreateWebHook(hook.Name, hook)
+	}
+	clog.Debugf("created hook github.com/%v (hook id %v)", hook.Name, hook.ID)
+	return hook
 }
-func (hub *GitHub) RemoveWebhook(key string) error {
-	clog.Debug("called.")
-	return nil
+
+func (hub *GitHub) RemoveWebhook(ns, bc string, id int) error {
+	key := ns + "/" + bc
+	hook, err := store.GetWebHook(key)
+	if hook == nil {
+		return errors.New("hook not found.")
+	}
+
+	if id != hook.ID {
+		clog.Errorf("hook %v mismatch, want remvoe %v, and met %v", hook.Name, id, hook.ID)
+		return errors.New("hook id mismatch.")
+	}
+
+	if hub.source != hook.Source {
+		clog.Errorf("hook %v (id %v) belongs to %v, and met %v", hook.Name, hook.ID, hook.Source, hub.source)
+		return errors.New("invalid request.")
+	}
+
+	clog.Debugf("remove github.com/%v/%v hook %v (hook id %v)", hook.Ns, hook.Repo, key, hook.ID)
+	resp, err := hub.client.Repositories.DeleteHook(hook.Ns, hook.Repo, hook.ID)
+	if err != nil {
+		clog.Error(err)
+		return err
+	}
+	_ = resp
+	return store.DeleteWebHook(key)
 }
+
 func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
-	clog.Debug("called.")
-	return nil
+	key := ns + "/" + bc
+	hook, err := store.GetWebHook(key)
+	if hook == nil {
+		clog.Error("hook is nil", err)
+		return nil
+	}
+
+	/*
+		TODO
+		should call git api to check if the hook is really exist,
+		and if not, remove record from db.
+	*/
+	return hook
 }
 
 func ListPersonalRepos(client *github.Client, user string) error {

@@ -10,7 +10,7 @@ type Gitter interface {
 	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
 	CreateWebhook(hook *WebHook) *WebHook
-	RemoveWebhook(key string) error
+	RemoveWebhook(ns, bc string, id int) error
 	CheckWebhook(ns, bc string) *WebHook
 	// SaveToken(tok *oauth2.Token) error
 	// LoadToken() (*oauth2.Token, error)
