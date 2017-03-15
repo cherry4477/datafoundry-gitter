@@ -25,12 +25,14 @@ func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(htmlIndex))
 }
 
 func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
 	user := "zonesan"
 
@@ -61,6 +63,7 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
 	user := "zonesan"
 
@@ -96,7 +99,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 }
 
 func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
 	user := "zonesan"
 
@@ -128,6 +131,7 @@ func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 }
 
 func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
 	user := "zonesan"
 
@@ -163,15 +167,21 @@ func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
 
-	hook.Name = ns + "/" + bc
-	hook.Source = source
+	hook = createWebhook(gitter, ns, bc, hook)
 
-	hook = createWebhook(gitter, hook)
+	if hook == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(http.StatusText(http.StatusBadRequest)))
+		return
+	}
+
 	RespOK(w, hook)
 }
 
 func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	source := ps.ByName("source")
+	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+	source, hookid := ps.ByName("source"), ps.ByName("hookid")
+
 	user := "zonesan"
 
 	var gitter Gitter
@@ -196,8 +206,12 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
-	key := ns + "/" + bc
-	removeWebhook(gitter, key)
+	err = removeWebhook(gitter, ns, bc, hookid)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
 	RespOK(w, nil)
 }
 

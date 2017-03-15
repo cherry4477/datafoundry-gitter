@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
@@ -28,8 +29,9 @@ func listTags(gitter Gitter, owner, repo string) {
 	gitter.ListTags(owner, repo)
 }
 
-func createWebhook(gitter Gitter, hook *WebHook) *WebHook {
+func createWebhook(gitter Gitter, ns, bc string, hook *WebHook) *WebHook {
 	clog.Debug("createWebhook interface")
+	hook.Name = ns + "/" + bc
 	return gitter.CreateWebhook(hook)
 }
 
@@ -38,9 +40,14 @@ func checkWebhook(gitter Gitter, ns, bc string) *WebHook {
 	return gitter.CheckWebhook(ns, bc)
 }
 
-func removeWebhook(gitter Gitter, key string) {
+func removeWebhook(gitter Gitter, ns, bc, hookid string) error {
 	clog.Debug("removeWebhook interface")
-	gitter.RemoveWebhook(key)
+	id, err := strconv.Atoi(hookid)
+	if err != nil {
+		clog.Error(err)
+		return err
+	}
+	return gitter.RemoveWebhook(ns, bc, id)
 }
 
 // func checkWebhook(gitter Gitter, hook interface{}) {

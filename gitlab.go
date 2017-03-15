@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	gitlab "github.com/xanzy/go-gitlab"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
@@ -8,11 +10,15 @@ import (
 
 type GitLab struct {
 	client *gitlab.Client
+	source string
 	repoid string
+	ns     string
+	bc     string
 }
 
 func NewGitLab(tok *oauth2.Token) *GitLab {
 	lab := new(GitLab)
+	lab.source = "gitlab"
 
 	// token, err := oauthConfGitLab.TokenSource(oauth2.NoContext, tok).Token()
 	// if err != nil {
@@ -121,6 +127,16 @@ func (lab *GitLab) ListBranches(owner, repo string) *[]Branch {
 func (lab *GitLab) ListTags(owner, repo string) { clog.Debug("called.") }
 func (lab *GitLab) CreateWebhook(hook *WebHook) *WebHook {
 	clog.Debugf("hook info: %#v", hook)
+
+	exist, err := store.GetWebHook(hook.Name)
+	if exist != nil {
+		return exist
+	}
+
+	hook.Source = lab.source
+	hook.Ns = ""
+	hook.Repo = ""
+
 	opt := &gitlab.AddProjectHookOptions{
 		URL:                   &hook.URL,
 		PushEvents:            enable(yes),
@@ -140,18 +156,48 @@ func (lab *GitLab) CreateWebhook(hook *WebHook) *WebHook {
 	return hook
 }
 
-func (lab *GitLab) RemoveWebhook(key string) error {
-	clog.Debug("called.")
-	return nil
+func (lab *GitLab) RemoveWebhook(ns, bc string, id int) error {
+	key := ns + "/" + bc
+	hook, err := store.GetWebHook(key)
+	if hook == nil {
+		return errors.New("hook not found.")
+	}
+	if id != hook.ID {
+		clog.Errorf("hook %v mismatch, want remvoe %v, and met %v", hook.Name, id, hook.ID)
+		return errors.New("hook id mismatch.")
+	}
+
+	if lab.source != hook.Source {
+		clog.Errorf("hook %v (id %v) belongs to %v, and met %v", hook.Name, hook.ID, hook.Source, lab.source)
+		return errors.New("invalid request.")
+	}
+
+	clog.Debugf("remove gitlab project %v hook %v (hook id %v)", hook.Pid, key, hook.ID)
+	resp, err := lab.client.Projects.DeleteProjectHook(hook.Pid, hook.ID)
+	// resp, err := hub.client.Repositories.DeleteHook(hook.Ns, hook.Repo, hook.ID)
+	if err != nil {
+		clog.Error(err)
+		return err
+	}
+	_ = resp
+	return store.DeleteWebHook(key)
 }
 
 func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
-	clog.Debug("called.")
+
 	key := ns + "/" + bc
 	hook, err := store.GetWebHook(key)
-	if err != nil {
-		clog.Error(err)
+	clog.Debugf("checking %v hook of %v", lab.source, key)
+	if hook == nil {
+		clog.Error("hook is nil:", err)
 		return nil
 	}
+	clog.Debugf("%v %v, id: %v", hook.Source, hook.Name, hook.ID)
+	/*
+		TODO
+		should call git api to check if the hook is really exist,
+		and if not, remove record from db.
+		should check err of store.GetWebHook(key) ?
+	*/
 	return hook
 }
