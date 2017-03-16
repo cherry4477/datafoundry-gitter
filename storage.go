@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"encoding/json"
+	"sync"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
 	"github.com/garyburd/redigo/redis"
@@ -150,20 +151,25 @@ func (s *storage) DeleteWebHook(webhook string) error {
 //=======================================================
 
 type memoryStorager struct {
+	sync.RWMutex
 	m map[string][]byte
 }
 
 func NewMemoryKeyValueStorager() KeyValueStorager {
-	return &memoryStorager{map[string][]byte{}}
+	return &memoryStorager{m: map[string][]byte{}}
 }
 
 func (ms *memoryStorager) Set(key string, value []byte) error {
+	ms.Lock()
 	ms.m[key] = value
+	ms.Unlock()
 	return nil
 }
 
 func (ms *memoryStorager) Get(key string) ([]byte, error) {
+	ms.RLock()
 	var value, present = ms.m[key]
+	ms.RUnlock()
 	if present {
 		return value, nil
 	} else {
@@ -172,7 +178,9 @@ func (ms *memoryStorager) Get(key string) ([]byte, error) {
 }
 
 func (ms *memoryStorager) Delete(key string) error {
+	ms.Lock()
 	delete(ms.m, key)
+	ms.Unlock()
 	return nil
 }
 
