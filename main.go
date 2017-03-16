@@ -1,39 +1,104 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 
-	"golang.org/x/oauth2"
-	githuboauth "golang.org/x/oauth2/github"
+	"github.com/julienschmidt/httprouter"
+	"github.com/zonesan/clog"
 )
 
 var (
-	// You must register the app at https://github.com/settings/applications
-	// Set callback to http://127.0.0.1:7000/github_oauth_cb
-	// Set ClientId and ClientSecret to
-	oauthConf = &oauth2.Config{
-		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		Scopes:       []string{"user:email", "repo"},
-		Endpoint:     githuboauth.Endpoint,
-	}
-	// random string for oauth2 API calls to protect against CSRF
-	oauthStateString = "ashdkjahiweakdaiirhfljskaowr"
+	store Storage
 )
 
 func main() {
 
-	if len(oauthConf.ClientID) == 0 || len(oauthConf.ClientSecret) == 0 {
-		fmt.Println("clientID or clientSecret must be specified.")
-		return
+	router := httprouter.New()
+	router.GET("/", handleMain)
+	router.NotFound = &Mux{}
+
+	// authoriza handler
+	router.GET("/authorize/:source", handleGitterAuthorize)
+
+	// callback handler
+	router.GET("/github_oauth_cb", handleGitHubCallback)
+	router.GET("/gitlab_oauth_cb", handleGitLabCallback)
+
+	router.GET("/repos/:source", handleRepos)
+	router.GET("/repos/:source/branches", handleRepoBranches)
+
+	router.GET("/repos/:source/webhook", handleCheckWebhook)
+	router.POST("/repos/:source/webhook", handleCreateWebhook)
+	router.DELETE("/repos/:source/webhook/:hookid", handleRemoveWebhook)
+
+	clog.Debug("listening on port 7000 ...")
+	clog.Fatal(http.ListenAndServe(":7000", router))
+
+}
+
+func init() {
+
+	// redis
+	var redisParams = os.Getenv("REDIS_SERVER_PARAMS")
+	if redisParams != "" {
+		// host+port+password
+		var words = strings.Split(redisParams, "+")
+		if len(words) < 3 {
+			clog.Fatalf("REDIS_SERVER_PARAMS (%s) should have 3 params, now: %d", redisParams, len(words))
+		}
+
+		store = NewRedisStorage(
+			words[0]+":"+words[1],
+			"", // blank clusterName means no sentinel servers
+			strings.Join(words[2:], "+"), // password
+
+		)
+	} else {
+		const RedisServiceKindName = "Redis"
+		var vcapServices = os.Getenv("VCAP_SERVICES")
+		if vcapServices == "" {
+			clog.Fatal("VCAP_SERVICES env is not set")
+		}
+		var redisBsiName = os.Getenv("Redis_BackingService_Name")
+		if redisBsiName == "" {
+			clog.Fatal("Redis_BackingService_Name env is not set")
+		}
+
+		type Credential struct {
+			Host     string `json:"Host"`
+			Name     string `json:"Name"`
+			Password string `json:"Password"`
+			Port     string `json:"Port"`
+			Uri      string `json:"Uri"`
+			Username string `json:"Username"`
+			VHost    string `json:"Vhost"`
+		}
+		type Service struct {
+			Name       string     `json:"name"`
+			Label      string     `json:"label"`
+			Plan       string     `json:"plan"`
+			Credential Credential `json:"credentials"`
+		}
+
+		var services = map[string][]Service{}
+		if err := json.Unmarshal([]byte(vcapServices), &services); err != nil {
+			clog.Fatalf("unmarshal VCAP_SERVICES error: %f\n%s", err, vcapServices)
+		}
+
+		var redisServices = services[RedisServiceKindName]
+		if len(redisServices) == 0 {
+			clog.Fatal("no redis services found in VCAP_SERVICES")
+		}
+
+		var credential = &redisServices[0].Credential
+		store = NewRedisStorage(
+			credential.Host+":"+credential.Port,
+			credential.Name,
+			credential.Password,
+		)
 	}
 
-	http.HandleFunc("/", handleMain)
-	http.HandleFunc("/login", handleGitHubLogin)
-	http.HandleFunc("/github_oauth_cb", handleGitHubCallback)
-
-	fmt.Println("Started running on http://127.0.0.1:7000")
-	fmt.Println(http.ListenAndServe(":7000", nil))
 }
