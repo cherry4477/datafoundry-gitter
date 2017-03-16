@@ -23,6 +23,15 @@ func webhookKey(key string) string {
 // Storage
 //=======================================================
 
+type storageError string
+func (se storageError) Error() string {
+	return string(se)
+}
+
+const (
+	StorageErr_NotFound storageError = ""
+)
+
 type Storage interface {
 	LoadTokenGitlab(user string) (*oauth2.Token, error)
 	SaveTokenGitlab(user string, tok *oauth2.Token) error
@@ -48,7 +57,7 @@ func NewStorage(kv KeyValueStorager) Storage {
 }
 
 //=======================================================
-// KeyValueStorage
+// storage
 //=======================================================
 
 type storage struct {
@@ -77,11 +86,15 @@ func (s *storage) Save(key string, obj interface{}) error {
 		clog.Debugf("marshal (%s) auth token (%v) error: %s", key, obj, err)
 		return err
 	}
-
-	err = s.Set(key, data)
-	if err != nil {
-		clog.Debugf("save (%s) error: %s", key, err)
-		return err
+	// if key doesn't exist, an error StorageErr_NotFound will be returned above.
+	
+	// data == nil means key exists and the value is exactly nil.
+	if data != nil {
+		err = s.Set(key, data)
+		if err != nil {
+			clog.Debugf("save (%s) error: %s", key, err)
+			return err
+		}
 	}
 
 	return nil
@@ -150,7 +163,12 @@ func (ms *memoryStorager) Set(key string, value []byte) error {
 }
 
 func (ms *memoryStorager) Get(key string) ([]byte, error) {
-	return ms.m[key], nil
+	var value, present = ms.m[key]
+	if present {
+		return value, nil
+	} else {
+		return nil, StorageErr_NotFound
+	}
 }
 
 func (ms *memoryStorager) Delete(key string) error {
@@ -249,7 +267,13 @@ func (ms *redisStorager) Get(key string) ([]byte, error) {
 	defer c.Close()
 
 	b, err := redis.Bytes(c.Do("GET", key))
-	if err != nil && err != redis.ErrNil {
+	switch {
+	}
+	if err != nil {
+		if err == redis.ErrNil {
+			return nil, StorageErr_NotFound
+		}
+
 		clog.Error("[GET] err:", err)
 		return nil, err
 	}
