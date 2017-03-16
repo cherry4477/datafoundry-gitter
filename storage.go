@@ -30,7 +30,7 @@ func (se storageError) Error() string {
 }
 
 const (
-	StorageErr_NotFound storageError = ""
+	StorageErr_NotFound storageError = "key not found or value is nil"
 )
 
 type Storage interface {
@@ -71,6 +71,11 @@ func (s *storage) Load(key string, into interface{}) error {
 		clog.Debugf("load (%s) error: %s", key, err)
 		return err
 	}
+	
+	// todo: ok?
+	if data == nil {
+		return StorageErr_NotFound
+	}
 
 	err = json.Unmarshal(data, into)
 	if err != nil {
@@ -87,15 +92,11 @@ func (s *storage) Save(key string, obj interface{}) error {
 		clog.Debugf("marshal (%s) auth token (%v) error: %s", key, obj, err)
 		return err
 	}
-	// if key doesn't exist, an error StorageErr_NotFound will be returned above.
-	
-	// data == nil means key exists and the value is exactly nil.
-	if data != nil {
-		err = s.Set(key, data)
-		if err != nil {
-			clog.Debugf("save (%s) error: %s", key, err)
-			return err
-		}
+
+	err = s.Set(key, data)
+	if err != nil {
+		clog.Debugf("save (%s) error: %s", key, err)
+		return err
 	}
 
 	return nil
@@ -118,7 +119,7 @@ func (s *storage) SaveTokenGitlab(user string, tok *oauth2.Token) error {
 
 func (s *storage) LoadTokenGithub(user string) (*oauth2.Token, error) {
 	var token = &oauth2.Token{}
-	if err := s.Load(gitlabUserAuthTokenKey(user), token); err != nil {
+	if err := s.Load(githubUserAuthTokenKey(user), token); err != nil {
 		return nil, err
 	}
 
