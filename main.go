@@ -21,18 +21,18 @@ func main() {
 	router.NotFound = &Mux{}
 
 	// authoriza handler
-	router.GET("/authorize/:source", handleGitterAuthorize)
+	router.GET("/authorize/:source", authorize(handleGitterAuthorize))
 
 	// callback handler
 	router.GET("/github_oauth_cb", handleGitHubCallback)
 	router.GET("/gitlab_oauth_cb", handleGitLabCallback)
 
-	router.GET("/repos/:source", handleRepos)
-	router.GET("/repos/:source/branches", handleRepoBranches)
+	router.GET("/repos/:source", authorize(handleRepos))
+	router.GET("/repos/:source/branches", authorize(handleRepoBranches))
 
-	router.GET("/repos/:source/webhook", handleCheckWebhook)
-	router.POST("/repos/:source/webhook", handleCreateWebhook)
-	router.DELETE("/repos/:source/webhook/:hookid", handleRemoveWebhook)
+	router.GET("/repos/:source/webhook", authorize(handleCheckWebhook))
+	router.POST("/repos/:source/webhook", authorize(handleCreateWebhook))
+	router.DELETE("/repos/:source/webhook/:hookid", authorize(handleRemoveWebhook))
 
 	clog.Debug("listening on port 7000 ...")
 	clog.Fatal(http.ListenAndServe(":7000", router))
