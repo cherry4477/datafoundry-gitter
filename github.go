@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 
+	_ "github.com/asiainfoLDP/datafoundry_gitter/openshift"
+
 	"github.com/google/go-github/github"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
