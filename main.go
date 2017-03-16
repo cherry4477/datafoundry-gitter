@@ -27,22 +27,6 @@ func main() {
 	router.GET("/github_oauth_cb", handleGitHubCallback)
 	router.GET("/gitlab_oauth_cb", handleGitLabCallback)
 
-	// // list repos handler
-	// router.GET("/repos/github", handleGitHubRepos)
-	// router.GET("/repos/gitlab", handleGitLabRepos)
-
-	// // list repo branches handler
-	// router.GET("/repos/github/branches", handleGitHubRepoBranches)
-	// router.GET("/repos/gitlab/branches", handleGitLabRepoBranches)
-
-	// // webhhook handler
-	// router.GET("/repos/github/webhook", handleGitHubCheckWebhook)
-	// router.POST("/repos/github/webhook", handleGitHubCreateWebhook)
-	// router.DELETE("/repos/github/webhook/:hookid", handleGitHubRemoveWebhook)
-	// router.GET("/repos/gitlab/webhook", handleGitLabCheckWebhook)
-	// router.POST("/repos/gitlab/webhook", handleGitLabCreateWebhook)
-	// router.DELETE("/repos/gitlab/webhook/:hookid", handleGitLabRemoveWebhook)
-
 	router.GET("/repos/:source", handleRepos)
 	router.GET("/repos/:source/branches", handleRepoBranches)
 
