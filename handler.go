@@ -24,6 +24,43 @@ func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("not found"))
 }
 
+func authorize(handle httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+
+		authEnable := false
+
+		if authEnable == false {
+			handle(w, r, ps)
+			return
+		}
+
+		token := r.Header.Get("Authorization")
+
+		dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+
+		user := new(User)
+		err := dfClient.OGet("/users/~", user)
+		if err != nil {
+			code := http.StatusBadRequest
+			if e, ok := err.(*StatusError); ok {
+				code = int(e.ErrStatus.Code)
+			}
+			http.Error(w, err.Error(), code)
+			return
+		}
+
+		r.Header.Set("user", user.Name)
+
+		ok := true
+		if ok {
+			handle(w, r, ps)
+		} else {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		}
+	}
+}
+
 func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -32,9 +69,9 @@ func handleMain(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+	//clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	var gitter Gitter
 	var err error
@@ -65,7 +102,7 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	var gitter Gitter
 	var err error
@@ -101,7 +138,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	var gitter Gitter
 	var err error
@@ -133,7 +170,7 @@ func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source := ps.ByName("source")
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	var gitter Gitter
 	var err error
@@ -182,7 +219,7 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	source, hookid := ps.ByName("source"), ps.ByName("hookid")
 
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	var gitter Gitter
 	var err error
@@ -216,7 +253,7 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 }
 
 func handleGitHubRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	git, err := newHubGitter(user)
 	if err != nil {
@@ -230,7 +267,7 @@ func handleGitHubRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 }
 
 func handleGitLabRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := "zonesan"
+	user := r.Header.Get("user")
 
 	git, err := newLabGitter(user)
 	if err != nil {
@@ -244,7 +281,7 @@ func handleGitLabRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 }
 
 func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := "zonesan"
+	user := r.Header.Get("user")
 	namespace, repo := r.FormValue("ns"), r.FormValue("repo")
 
 	git, err := newHubGitter(user)
@@ -259,7 +296,7 @@ func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprou
 }
 
 func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := "zonesan"
+	user := r.Header.Get("user")
 	id := r.FormValue("id")
 
 	git, err := newLabGitter(user)
@@ -274,7 +311,7 @@ func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprou
 }
 
 func handleGitHubCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := "zonesan"
+	user := r.Header.Get("user")
 	// namespace, repo := r.FormValue("namespace"), r.FormValue("repo")
 	// if len(namespace) == 0 || len(repo) == 0 {
 	// 	w.WriteHeader(http.StatusNotFound)
@@ -321,13 +358,14 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 	var url string
 
 	source := ps.ByName("source")
+	user := r.Header.Get("user")
 
 	switch source {
 	case "github":
-		oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=/repos/github&user=zonesan"
+		oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=/repos/github&user=" + user
 		url = oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	case "gitlab":
-		oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=/repos/gitlab&user=zonesan"
+		oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=/repos/gitlab&user=" + user
 		url = oauthConfGitLab.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	default:
 		w.WriteHeader(http.StatusNotFound)

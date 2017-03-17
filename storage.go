@@ -20,6 +20,16 @@ func webhookKey(key string) string {
 	return "webhook/" + key
 }
 
+func gitlabUserSecretKey(namespace, user string) string {
+	return "gitlab/secret/" + namespace + "/" + user
+}
+func githubUserSecretKey(namespace, user string) string {
+	return "github/secret/" + namespace + "/" + user
+}
+func gitlabUserKeyFilesKey(user string) string {
+	return "gitlab/keys/" + user
+}
+
 //=======================================================
 // Storage
 //=======================================================
@@ -38,9 +48,18 @@ type Storage interface {
 	SaveTokenGitlab(user string, tok *oauth2.Token) error
 	LoadTokenGithub(user string) (*oauth2.Token, error)
 	SaveTokenGithub(user string, tok *oauth2.Token) error
+
 	GetWebHook(webhook string) (*WebHook, error)
 	CreateWebHook(webhook string, hook *WebHook) error
 	DeleteWebHook(webhook string) error
+
+	LoadSecretGitlab(user, ns string) (*Secret, error)
+	SaveSecretGitlab(user, ns string, secret *Secret) error
+	LoadSecretGithub(user, ns string) (*Secret, error)
+	SaveSecretGithub(user, ns string, secret *Secret) error
+	
+	LoadSSHKeyGitlab(user string) (*RSAKey, error)
+	SaveSSHKeyGitlab(user string, key *RSAKey) error
 }
 var _ Storage = &storage{}
 
@@ -147,6 +166,45 @@ func (s *storage) DeleteWebHook(webhook string) error {
 	return s.Delete(webhookKey(webhook))
 }
 
+func (s *storage) LoadSecretGitlab(user, ns string) (*Secret, error) {
+	var secret = &Secret{}
+	if err := s.Load(gitlabUserSecretKey(ns, user), secret); err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
+
+func (s *storage) SaveSecretGitlab(user, ns string, secret *Secret) error {
+	return s.Save(gitlabUserSecretKey(ns, user), secret)
+}
+
+func (s *storage) LoadSecretGithub(user, ns string) (*Secret, error) {
+	var secret = &Secret{}
+	if err := s.Load(githubUserSecretKey(ns, user), secret); err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
+
+func (s *storage) SaveSecretGithub(user, ns string, secret *Secret) error {
+	return s.Save(githubUserSecretKey(ns, user), secret)
+}
+	
+func (s *storage) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
+	var key = &RSAKey{}
+	if err := s.Load(gitlabUserKeyFilesKey(user), key); err != nil {
+		return nil, err
+	}
+
+	return key, nil
+}
+
+func (s *storage) SaveSSHKeyGitlab(user string, key *RSAKey) error {
+	return s.Save(gitlabUserKeyFilesKey(user), key)
+}
+
 //=======================================================
 // memory kv
 //=======================================================
@@ -229,7 +287,7 @@ func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorag
 					masterAddr = redisMasterPair[0] + ":" + redisMasterPair[1]
 					return nil
 				}()
-				
+
 				if err != nil {
 					return nil, err
 				}
@@ -255,7 +313,7 @@ func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorag
 			return err
 		},
 	}
-	
+
 	return &redisStorager{pool: p}
 }
 

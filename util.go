@@ -60,7 +60,7 @@ func RespOK(w http.ResponseWriter, data interface{}) {
 
 // rsa public and private keys
 func generateKeyPair() (privateKey, publicKey string, err error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 4096)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return
 	}

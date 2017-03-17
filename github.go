@@ -34,6 +34,8 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 
 	oauthClient := oauthConf.Client(oauth2.NoContext, tok)
 
+	clog.Debug("token:", tok.AccessToken)
+
 	client := github.NewClient(oauthClient)
 
 	hub.client = client
