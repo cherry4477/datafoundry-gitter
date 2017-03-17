@@ -63,6 +63,19 @@ type hookParam struct {
 	URL  string `json:"url"`
 }
 
+type RSAKey struct {
+	Owner   *string
+	Pubkey  *string
+	Privkey *string
+}
+
+type Secret struct {
+	ns        string
+	user      string
+	secret    string
+	available bool
+}
+
 var (
 	yes = true
 	no  = false

@@ -15,12 +15,18 @@ var hookStore = make(map[string]*WebHook)
 
 type Storage interface {
 	LoadTokenGitlab(user string) (*oauth2.Token, error)
-	SaveTokenGitlab(user string, tok *oauth2.Token) error
 	LoadTokenGithub(user string) (*oauth2.Token, error)
+	SaveTokenGitlab(user string, tok *oauth2.Token) error
 	SaveTokenGithub(user string, tok *oauth2.Token) error
 	GetWebHook(key string) (*WebHook, error)
 	CreateWebHook(key string, hook *WebHook) error
 	DeleteWebHook(key string) error
+	LoadSecretGitlab(user, ns string) (*Secret, error)
+	LoadSecretGithub(user, ns string) (*Secret, error)
+	SaveSecretGitlab(user, ns string, secret *Secret) error
+	SaveSecretGithub(user, ns string, secret *Secret) error
+	LoadSSHKeyGitlab(user string) (*RSAKey, error)
+	SaveSSHKeyGitlab(user string, key *RSAKey) error
 }
 
 type RedisStore struct {
@@ -124,5 +130,24 @@ func (rs *RedisStore) CreateWebHook(key string, hook *WebHook) error {
 }
 func (rs *RedisStore) DeleteWebHook(key string) error {
 	delete(hookStore, key)
+	return nil
+}
+
+func (rs *RedisStore) LoadSecretGitlab(user, ns string) (*Secret, error) {
+	return nil, nil
+}
+func (rs *RedisStore) LoadSecretGithub(user, ns string) (*Secret, error) {
+	return nil, nil
+}
+func (rs *RedisStore) SaveSecretGitlab(user, ns string, secret *Secret) error {
+	return nil
+}
+func (rs *RedisStore) SaveSecretGithub(user, ns string, secret *Secret) error {
+	return nil
+}
+func (rs *RedisStore) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
+	return nil, nil
+}
+func (rs *RedisStore) SaveSSHKeyGitlab(user string, key *RSAKey) error {
 	return nil
 }
