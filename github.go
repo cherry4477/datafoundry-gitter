@@ -12,12 +12,15 @@ import (
 )
 
 type GitHub struct {
-	client *github.Client
-	source string
-	owner  string
-	repo   string
-	ns     string
-	bc     string
+	client      *github.Client
+	source      string
+	oauthtoken  string
+	bearertoken string
+	owner       string
+	repo        string
+	ns          string
+	bc          string
+	user        string
 }
 
 func NewGitHub(tok *oauth2.Token) *GitHub {
@@ -41,7 +44,7 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	return hub
 }
 
-func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
+func (hub *GitHub) ListPersonalRepos() *[]Repositories {
 
 	var allRepos []*github.Repository
 
@@ -215,6 +218,55 @@ func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
 		and if not, remove record from db.
 	*/
 	return hook
+}
+
+func (hub *GitHub) CreateSecret(ns, name string) *Secret {
+	token := hub.GetBearerToken()
+	dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+	data := make(map[string]string)
+	data["password"] = hub.GetOauthToken()
+	ksecret, err := dfClient.CreateSecret(ns, name, data)
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	secret := new(Secret)
+	secret.User = hub.User()
+	secret.Secret = ksecret.Name
+	secret.Ns = ns
+	secret.Available = true
+	store.SaveSecretGithub(hub.User(), ns, secret)
+	clog.Debugf("%#v,%#v", ksecret, secret)
+
+	return secret
+}
+
+func (hub *GitHub) CheckSecret(ns string) *Secret {
+	//key := hub.Source() + "/" + hub.User() + "/" + ns
+	secret, _ := store.LoadSecretGithub(hub.User(), ns)
+	if secret == nil {
+		clog.Warn("secret is nil")
+	}
+	return secret
+}
+
+func (hub *GitHub) Source() string {
+	return hub.source
+}
+
+func (hub *GitHub) User() string {
+	return hub.user
+}
+
+func (hub *GitHub) GetOauthToken() string {
+	return hub.oauthtoken
+}
+
+func (hub *GitHub) GetBearerToken() string {
+	return hub.bearertoken
+}
+func (hub *GitHub) SetBearerToken(bearer string) {
+	hub.bearertoken = bearer
 }
 
 func ListPersonalRepos(client *github.Client, user string) error {

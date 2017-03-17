@@ -5,13 +5,20 @@ import (
 )
 
 type Gitter interface {
-	ListPersonalRepos(user string) *[]Repositories
+	Source() string
+	User() string
+	ListPersonalRepos() *[]Repositories
 	ListOrgRepos(org string)
 	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
 	CreateWebhook(hook *WebHook) *WebHook
 	RemoveWebhook(ns, bc string, id int) error
 	CheckWebhook(ns, bc string) *WebHook
+	CreateSecret(ns, secret string) *Secret
+	CheckSecret(ns string) *Secret
+	GetOauthToken() string
+	GetBearerToken() string
+	SetBearerToken(bearer string)
 	// SaveToken(tok *oauth2.Token) error
 	// LoadToken() (*oauth2.Token, error)
 }
@@ -70,10 +77,10 @@ type RSAKey struct {
 }
 
 type Secret struct {
-	ns        string
-	user      string
-	secret    string
-	available bool
+	Ns        string `json:"namespace"`
+	User      string `json:"user"`
+	Secret    string `json:"secret"`
+	Available bool   `json:"available"`
 }
 
 var (

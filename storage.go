@@ -13,6 +13,8 @@ var hubStore = make(map[string]*oauth2.Token)
 
 var hookStore = make(map[string]*WebHook)
 
+var secretStore = make(map[string]*Secret)
+
 type Storage interface {
 	LoadTokenGitlab(user string) (*oauth2.Token, error)
 	LoadTokenGithub(user string) (*oauth2.Token, error)
@@ -134,17 +136,30 @@ func (rs *RedisStore) DeleteWebHook(key string) error {
 }
 
 func (rs *RedisStore) LoadSecretGitlab(user, ns string) (*Secret, error) {
-	return nil, nil
+	key := user + "/" + ns
+	return secretStore[key], nil
 }
+
 func (rs *RedisStore) LoadSecretGithub(user, ns string) (*Secret, error) {
-	return nil, nil
+	// key := hub.Source() + "/" + hub.User() + "/" + ns
+	// key should be source/user/namespace, e.g. github/chaizs/datafoundry
+	key := user + "/" + ns
+	return secretStore[key], nil
 }
+
 func (rs *RedisStore) SaveSecretGitlab(user, ns string, secret *Secret) error {
+
+	key := user + "/" + ns
+	secretStore[key] = secret
 	return nil
 }
+
 func (rs *RedisStore) SaveSecretGithub(user, ns string, secret *Secret) error {
+	key := user + "/" + ns
+	secretStore[key] = secret
 	return nil
 }
+
 func (rs *RedisStore) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
 	return nil, nil
 }

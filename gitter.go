@@ -9,9 +9,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func listPersonalRepos(gitter Gitter, user string) *[]Repositories {
+func listPersonalRepos(gitter Gitter) *[]Repositories {
 	clog.Debug("listPersonalRepos interface")
-	return gitter.ListPersonalRepos(user)
+	return gitter.ListPersonalRepos()
 }
 
 func listOrgRepos(gitter Gitter, org string) {
@@ -38,6 +38,16 @@ func createWebhook(gitter Gitter, ns, bc string, hook *WebHook) *WebHook {
 func checkWebhook(gitter Gitter, ns, bc string) *WebHook {
 	clog.Debug("checkWebhook interface")
 	return gitter.CheckWebhook(ns, bc)
+}
+
+func checkSecret(gitter Gitter, ns string) *Secret {
+	clog.Debug("checkSecret interface")
+	secret := gitter.CheckSecret(ns)
+	if secret == nil {
+		secretName := gitter.Source() + "-" + gitter.User() + "-" + randomStr(8)
+		secret = gitter.CreateSecret(ns, secretName)
+	}
+	return secret
 }
 
 func removeWebhook(gitter Gitter, ns, bc, hookid string) error {
@@ -114,6 +124,10 @@ func newLabGitter(user string) (Gitter, error) {
 		clog.Error(errStr)
 		return nil, errors.New(errStr)
 	}
+
+	// NEVER FORGET THIS
+	gitter.user = user
+
 	return gitter, nil
 }
 
@@ -131,6 +145,8 @@ func newHubGitter(user string) (Gitter, error) {
 		clog.Error(errStr)
 		return nil, errors.New(errStr)
 	}
-	return gitter, nil
 
+	// NEVER FORGET THIS
+	gitter.user = user
+	return gitter, nil
 }

@@ -95,7 +95,7 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 	// repos := gitter.ListPersonalRepos(user)
-	repos := listPersonalRepos(gitter, user)
+	repos := listPersonalRepos(gitter)
 	RespOK(w, repos)
 }
 
@@ -133,6 +133,39 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	branches := listBranches(gitter, ns, repo)
 	RespOK(w, branches)
 
+}
+
+func handleSecret(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	source := ps.ByName("source")
+	user := r.Header.Get("user")
+	ns := r.FormValue("ns")
+
+	var gitter Gitter
+	var err error
+
+	switch source {
+	case "github":
+		gitter, err = newHubGitter(user)
+		if err != nil {
+			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			return
+		}
+	case "gitlab":
+		gitter, err = newLabGitter(user)
+		if err != nil {
+			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		return
+	}
+	token := r.Header.Get("Authorization")
+	gitter.SetBearerToken(token)
+	secret := checkSecret(gitter, ns)
+	RespOK(w, secret)
 }
 
 func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -250,108 +283,6 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 	RespOK(w, nil)
-}
-
-func handleGitHubRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := r.Header.Get("user")
-
-	git, err := newHubGitter(user)
-	if err != nil {
-		http.Redirect(w, r, "/authorize/github", http.StatusFound)
-		return
-	}
-
-	repos := git.ListPersonalRepos(user)
-	RespOK(w, repos)
-
-}
-
-func handleGitLabRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := r.Header.Get("user")
-
-	git, err := newLabGitter(user)
-	if err != nil {
-		http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
-		return
-	}
-
-	repos := git.ListPersonalRepos(user)
-	RespOK(w, repos)
-
-}
-
-func handleGitHubRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := r.Header.Get("user")
-	namespace, repo := r.FormValue("ns"), r.FormValue("repo")
-
-	git, err := newHubGitter(user)
-	if err != nil {
-		http.Redirect(w, r, "/authorize/github", http.StatusFound)
-		return
-	}
-
-	branches := git.ListBranches(namespace, repo)
-
-	RespOK(w, branches)
-}
-
-func handleGitLabRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := r.Header.Get("user")
-	id := r.FormValue("id")
-
-	git, err := newLabGitter(user)
-	if err != nil {
-		http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
-		return
-	}
-
-	branches := git.ListBranches("", id)
-	RespOK(w, branches)
-
-}
-
-func handleGitHubCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	user := r.Header.Get("user")
-	// namespace, repo := r.FormValue("namespace"), r.FormValue("repo")
-	// if len(namespace) == 0 || len(repo) == 0 {
-	// 	w.WriteHeader(http.StatusNotFound)
-	// 	w.Write([]byte(http.StatusText(http.StatusNotFound)))
-	// 	return
-	// }
-	ns, bc := r.FormValue("ns"), r.FormValue("bc")
-
-	git, err := newHubGitter(user)
-	if err != nil {
-		http.Redirect(w, r, "/authorize/github", http.StatusFound)
-		return
-	}
-	hook := git.CheckWebhook(ns, bc)
-	RespOK(w, hook)
-}
-
-func handleGitHubCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
-	handleMain(w, r, ps)
-}
-
-func handleGitHubRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	handleMain(w, r, ps)
-}
-
-func handleGitLabCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	ns, bc := r.FormValue("ns"), r.FormValue("bc")
-	if len(ns) == 0 || len(bc) == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
-		return
-	}
-	handleMain(w, r, ps)
-}
-func handleGitLabCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	handleMain(w, r, ps)
-}
-func handleGitLabRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	handleMain(w, r, ps)
 }
 
 func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

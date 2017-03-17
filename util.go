@@ -9,8 +9,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	mathrand "math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zonesan/clog"
@@ -126,4 +128,31 @@ func parseRequestBody(r *http.Request, v interface{}) error {
 	}
 
 	return nil
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+var numLetters = len(letters)
+var rng = struct {
+	sync.Mutex
+	rand *mathrand.Rand
+}{
+	rand: mathrand.New(mathrand.NewSource(time.Now().UTC().UnixNano())),
+}
+
+// intn generates an integer in range 0->max.
+// By design this should panic if input is invalid, <= 0.
+func intn(max int) int {
+	rng.Lock()
+	defer rng.Unlock()
+	return rng.rand.Intn(max)
+}
+
+// String generates a random alphanumeric string n characters long.  This will
+// panic if n is less than zero.
+func randomStr(length int) string {
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letters[intn(numLetters)]
+	}
+	return string(b)
 }

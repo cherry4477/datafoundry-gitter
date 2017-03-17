@@ -9,11 +9,14 @@ import (
 )
 
 type GitLab struct {
-	client *gitlab.Client
-	source string
-	repoid string
-	ns     string
-	bc     string
+	client      *gitlab.Client
+	source      string
+	oauthtoken  string
+	bearertoken string
+	repoid      string
+	ns          string
+	bc          string
+	user        string
 }
 
 func NewGitLab(tok *oauth2.Token) *GitLab {
@@ -42,7 +45,7 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 
 }
 
-func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
+func (lab *GitLab) ListPersonalRepos() *[]Repositories {
 	// clog.Debugf("list repos of %s called.", user)
 
 	var allRepos []*gitlab.Project
@@ -200,4 +203,52 @@ func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
 		should check err of store.GetWebHook(key) ?
 	*/
 	return hook
+}
+
+func (lab *GitLab) CreateSecret(ns, name string) *Secret {
+	token := lab.GetBearerToken()
+	dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+	data := make(map[string]string)
+	// data["password"] = sad
+	ksecret, err := dfClient.CreateSecret(ns, name, data)
+	if err != nil {
+		clog.Error(err)
+		return nil
+	}
+	secret := new(Secret)
+	secret.User = lab.User()
+	secret.Secret = ksecret.Name
+	secret.Ns = ns
+	secret.Available = true
+	store.SaveSecretGithub(lab.User(), ns, secret)
+	clog.Debugf("%#v,%#v", ksecret, secret)
+
+	return secret
+}
+
+func (lab *GitLab) CheckSecret(ns string) *Secret {
+	//key := hub.Source() + "/" + hub.User() + "/" + ns
+	secret, _ := store.LoadSecretGitlab(lab.User(), ns)
+	if secret == nil {
+		clog.Warn("secret is nil")
+	}
+	return secret
+}
+
+func (lab *GitLab) Source() string {
+	return lab.source
+}
+
+func (lab *GitLab) User() string {
+	return lab.user
+}
+
+func (lab *GitLab) GetOauthToken() string {
+	return lab.oauthtoken
+}
+func (lab *GitLab) GetBearerToken() string {
+	return lab.bearertoken
+}
+func (lab *GitLab) SetBearerToken(bearer string) {
+	lab.bearertoken = bearer
 }

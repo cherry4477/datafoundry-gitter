@@ -30,6 +30,8 @@ func main() {
 	router.GET("/repos/:source", authorize(handleRepos))
 	router.GET("/repos/:source/branches", authorize(handleRepoBranches))
 
+	router.GET("/repos/:source/secret", authorize(handleSecret))
+
 	router.GET("/repos/:source/webhook", authorize(handleCheckWebhook))
 	router.POST("/repos/:source/webhook", authorize(handleCreateWebhook))
 	router.DELETE("/repos/:source/webhook/:hookid", authorize(handleRemoveWebhook))

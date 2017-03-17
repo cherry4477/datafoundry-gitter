@@ -60,6 +60,17 @@ func (c *DataFoundryClient) BearerToken() string {
 	return c.bearerToken.Load().(string)
 }
 
+func (c *DataFoundryClient) CreateSecret(ns, name string, data map[string]string) (*kapi.Secret, error) {
+	uri := "/namespaces/" + ns + "/secrets"
+
+	sReq := new(kapi.Secret)
+	sReq.Name = name
+	// sReq.Data
+	secret := new(kapi.Secret)
+	err := c.KPost(uri, sReq, secret)
+	return secret, err
+}
+
 func (c *DataFoundryClient) OGet(uri string, into interface{}) error {
 	return c.doRequest("GET", c.oapiUrl+uri, nil, into)
 }
