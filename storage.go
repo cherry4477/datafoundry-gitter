@@ -19,7 +19,6 @@ func githubUserAuthTokenKey(user string) string {
 func webhookKey(key string) string {
 	return "webhook/" + key
 }
-
 func gitlabUserSecretKey(namespace, user string) string {
 	return "gitlab/secret/" + namespace + "/" + user
 }
