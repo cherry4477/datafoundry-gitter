@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	store Storage
+	store               Storage
+	DataFoundryHostAddr string
 )
 
 func main() {
@@ -43,6 +44,12 @@ func main() {
 
 func init() {
 
+	DataFoundryHostAddr = os.Getenv("DATAFOUNDRY_API_SERVER")
+	if len(DataFoundryHostAddr) == 0 {
+		clog.Fatal("DATAFOUNDRY_API_SERVER must be specified.")
+	}
+	DataFoundryHostAddr = httpsAddr(DataFoundryHostAddr)
+	clog.Debug("datafoundry api server:", DataFoundryHostAddr)
 	// redis
 	var redisParams = os.Getenv("REDIS_SERVER_PARAMS")
 	if redisParams != "" {
@@ -87,7 +94,7 @@ func init() {
 
 		var services = map[string][]Service{}
 		if err := json.Unmarshal([]byte(vcapServices), &services); err != nil {
-			clog.Fatalf("unmarshal VCAP_SERVICES error: %f\n%s", err, vcapServices)
+			clog.Fatalf("unmarshal VCAP_SERVICES error: %v\n%s", err, vcapServices)
 		}
 
 		var redisServices = services[RedisServiceKindName]

@@ -38,7 +38,7 @@ func randToken() string {
 // }
 
 func debug(v interface{}) {
-	return
+	// return
 	d, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		fmt.Printf("json.MarshlIndent() failed with %s\n", err)
@@ -155,4 +155,24 @@ func randomStr(length int) string {
 		b[i] = letters[intn(numLetters)]
 	}
 	return string(b)
+}
+
+func httpAddr(addr string) string {
+
+	if !strings.HasPrefix(strings.ToLower(addr), "http://") &&
+		!strings.HasPrefix(strings.ToLower(addr), "https://") {
+		return fmt.Sprintf("http://%s", addr)
+	}
+
+	return setBaseUrl(addr)
+}
+
+func httpsAddr(addr string) string {
+
+	if !strings.HasPrefix(strings.ToLower(addr), "http://") &&
+		!strings.HasPrefix(strings.ToLower(addr), "https://") {
+		return fmt.Sprintf("https://%s", addr)
+	}
+
+	return setBaseUrl(addr)
 }

@@ -3,15 +3,15 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	// "encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"sync/atomic"
-	//user secret
-	// "github.com/zonesan/clog"
 
+	"github.com/zonesan/clog"
 	"k8s.io/kubernetes/pkg/api/unversioned"
 	kapi "k8s.io/kubernetes/pkg/api/v1"
 )
@@ -38,12 +38,12 @@ type User struct {
 	Groups []string `json:"groups" protobuf:"bytes,4,rep,name=groups"`
 }
 
-func NewDataFoundryTokenClient(host, bearerToken string) *DataFoundryClient {
-	host = setBaseUrl(host)
+func NewDataFoundryTokenClient(bearerToken string) *DataFoundryClient {
+	// host = setBaseUrl(host)
 	client := &DataFoundryClient{
-		host:    host,
-		oapiUrl: host + "/oapi/v1",
-		kapiUrl: host + "/api/v1",
+		host:    DataFoundryHostAddr,
+		oapiUrl: DataFoundryHostAddr + "/oapi/v1",
+		kapiUrl: DataFoundryHostAddr + "/api/v1",
 	}
 
 	client.setBearerToken(bearerToken)
@@ -65,7 +65,13 @@ func (c *DataFoundryClient) CreateSecret(ns, name string, data map[string]string
 
 	sReq := new(kapi.Secret)
 	sReq.Name = name
-	// sReq.Data
+	sReq.Data = make(map[string][]byte)
+
+	clog.Debugf("%v", data)
+
+	for key, value := range data {
+		sReq.Data[key] = []byte(value)
+	}
 	secret := new(kapi.Secret)
 	err := c.KPost(uri, sReq, secret)
 	return secret, err
@@ -136,6 +142,7 @@ func (c *DataFoundryClient) request(method string, url string, body []byte) (*ht
 		return nil, errors.New("token is blank")
 	}
 
+	clog.Trace("request url:", url)
 	var req *http.Request
 	var err error
 	if len(body) == 0 {
@@ -185,7 +192,6 @@ func checkRespStatus(r *http.Response) error {
 	if c := r.StatusCode; 200 <= c && c <= 299 {
 		return nil
 	}
-
 	// openshift returns 401 with a plain text but not ErrStatus json, so we hacked this response text.
 	if r.StatusCode == http.StatusUnauthorized {
 		errorResponse := &StatusError{}
@@ -197,7 +203,7 @@ func checkRespStatus(r *http.Response) error {
 	errorResponse := &StatusError{}
 	data, err := ioutil.ReadAll(r.Body)
 	if err == nil && data != nil {
-		//clog.Errorf("%s", data)
+		clog.Errorf("%v,%s", r.StatusCode, data)
 		json.Unmarshal(data, &errorResponse.ErrStatus)
 	}
 

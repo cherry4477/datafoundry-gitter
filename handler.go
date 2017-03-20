@@ -28,7 +28,7 @@ func authorize(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 
-		authEnable := false
+		authEnable := true
 
 		if authEnable == false {
 			handle(w, r, ps)
@@ -37,7 +37,7 @@ func authorize(handle httprouter.Handle) httprouter.Handle {
 
 		token := r.Header.Get("Authorization")
 
-		dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+		dfClient := NewDataFoundryTokenClient(token)
 
 		user := new(User)
 		err := dfClient.OGet("/users/~", user)
@@ -162,7 +162,18 @@ func handleSecret(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))
 		return
 	}
+
 	token := r.Header.Get("Authorization")
+	if len(token) == 0 || len(user) == 0 {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if len(ns) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
 	gitter.SetBearerToken(token)
 	secret := checkSecret(gitter, ns)
 	RespOK(w, secret)

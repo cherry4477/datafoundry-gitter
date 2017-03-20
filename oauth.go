@@ -56,7 +56,7 @@ func init() {
 		return
 	}
 
-	clog.Debug("random state string:", oauthStateString)
+	clog.Debug("oauth state string:", oauthStateString)
 	clog.Debugf("gitlab: %+v", oauthConfGitLab.Endpoint)
 	clog.Debug("gitlab callback url:", gitLabCallBackURL)
 	clog.Debug("github callback url:", gitHubCallBackURL)

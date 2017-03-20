@@ -33,6 +33,11 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	// 	token = tok
 	// }
 
+	if tok == nil {
+		clog.Error("not authorized yet.")
+		return nil
+	}
+
 	oauthClient := oauthConf.Client(oauth2.NoContext, tok)
 
 	clog.Debug("token:", tok.AccessToken)
@@ -40,6 +45,7 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	client := github.NewClient(oauthClient)
 
 	hub.client = client
+	hub.oauthtoken = tok.AccessToken
 
 	return hub
 }
@@ -222,19 +228,24 @@ func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
 
 func (hub *GitHub) CreateSecret(ns, name string) *Secret {
 	token := hub.GetBearerToken()
-	dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+
+	dfClient := NewDataFoundryTokenClient(token)
+
 	data := make(map[string]string)
 	data["password"] = hub.GetOauthToken()
+
 	ksecret, err := dfClient.CreateSecret(ns, name, data)
 	if err != nil {
 		clog.Error(err)
 		return nil
 	}
+
 	secret := new(Secret)
 	secret.User = hub.User()
 	secret.Secret = ksecret.Name
 	secret.Ns = ns
 	secret.Available = true
+
 	store.SaveSecretGithub(hub.User(), ns, secret)
 	clog.Debugf("%#v,%#v", ksecret, secret)
 

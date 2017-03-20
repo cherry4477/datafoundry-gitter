@@ -1,10 +1,18 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	gitlab "github.com/xanzy/go-gitlab"
 	"github.com/zonesan/clog"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/oauth2"
 )
 
@@ -35,11 +43,13 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 	}
 
 	oauthClient := oauthConfGitLab.Client(oauth2.NoContext, tok)
+	clog.Debug("token:", tok.AccessToken)
 
 	client := gitlab.NewOAuthClient(oauthClient, tok.AccessToken)
 	client.SetBaseURL(gitlabBaseURL + "/api/v3")
 
 	lab.client = client
+	lab.oauthtoken = tok.AccessToken
 
 	return lab
 
@@ -205,11 +215,59 @@ func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
 	return hook
 }
 
+func (lab *GitLab) deploySSHPubKey(pubkey string) error {
+	return nil
+}
+
+func (lab *GitLab) getSSHPrivateKey() (string, error) {
+	return "", nil
+}
+
+func (lab *GitLab) generateSSHeKeyPair() (privateKey, publicKey string, err error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return
+	}
+	err = priv.Validate()
+	if err != nil {
+		return
+	}
+
+	priv_der := x509.MarshalPKCS1PrivateKey(priv)
+
+	// pem.Block
+	// blk pem.Block
+	priv_blk := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   priv_der,
+	}
+
+	// Resultant private key in PEM format.
+	// priv_pem string
+	privateKey = string(pem.EncodeToMemory(&priv_blk))
+	//println("private:", privateKey)
+
+	pub := priv.PublicKey
+
+	sshpub, err := ssh.NewPublicKey(&pub)
+	if err != nil {
+		return
+	}
+	publicKey = string(ssh.MarshalAuthorizedKey(sshpub))
+	publicKey = strings.TrimRight(publicKey, "\n")
+	publicKey = fmt.Sprintf("%s rsa-key-%s", publicKey, time.Now().Format("20060102"))
+	//println("public:", publicKey)
+
+	return
+
+}
+
 func (lab *GitLab) CreateSecret(ns, name string) *Secret {
 	token := lab.GetBearerToken()
-	dfClient := NewDataFoundryTokenClient("https://10.1.130.134:8443", token)
+	dfClient := NewDataFoundryTokenClient(token)
 	data := make(map[string]string)
-	// data["password"] = sad
+	data["ssh-privatekey"] = "asd"
 	ksecret, err := dfClient.CreateSecret(ns, name, data)
 	if err != nil {
 		clog.Error(err)
