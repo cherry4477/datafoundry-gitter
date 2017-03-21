@@ -50,7 +50,14 @@ func init() {
 	}
 	DataFoundryHostAddr = httpsAddr(DataFoundryHostAddr)
 	clog.Debug("datafoundry api server:", DataFoundryHostAddr)
+
 	// redis
+
+	//store = NewStorage(NewMemoryKeyValueStorager())
+	//return
+
+	var redisStorager KeyValueStorager
+
 	var redisParams = os.Getenv("REDIS_SERVER_PARAMS")
 	if redisParams != "" {
 		// host+port+password
@@ -59,12 +66,14 @@ func init() {
 			clog.Fatalf("REDIS_SERVER_PARAMS (%s) should have 3 params, now: %d", redisParams, len(words))
 		}
 
-		store = NewRedisStorage(
-			words[0]+":"+words[1],
+		redisStorager = NewRedisKeyValueStorager(
+			words[0] + ":" +  words[1],
 			"", // blank clusterName means no sentinel servers
-			strings.Join(words[2:], "+"), // password
-
+			strings.Join(words[2:], "+", // password
+			),
 		)
+
+		clog.Info("redis storage created with REDIS_SERVER_PARAMS:", redisParams)
 	} else {
 		const RedisServiceKindName = "Redis"
 		var vcapServices = os.Getenv("VCAP_SERVICES")
@@ -94,7 +103,7 @@ func init() {
 
 		var services = map[string][]Service{}
 		if err := json.Unmarshal([]byte(vcapServices), &services); err != nil {
-			clog.Fatalf("unmarshal VCAP_SERVICES error: %v\n%s", err, vcapServices)
+			clog.Fatalf("unmarshal VCAP_SERVICES error: %f\n%s", err, vcapServices)
 		}
 
 		var redisServices = services[RedisServiceKindName]
@@ -103,11 +112,14 @@ func init() {
 		}
 
 		var credential = &redisServices[0].Credential
-		store = NewRedisStorage(
-			credential.Host+":"+credential.Port,
+		redisStorager = NewRedisKeyValueStorager(
+			credential.Host + ":" + credential.Port,
 			credential.Name,
 			credential.Password,
 		)
+
+		clog.Info("redis storage created with VCAP_SERVICES:", credential)
 	}
 
+	store = NewStorage(redisStorager)
 }
