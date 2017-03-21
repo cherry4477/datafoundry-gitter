@@ -226,7 +226,7 @@ func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
 	return hook
 }
 
-func (hub *GitHub) CreateSecret(ns, name string) *Secret {
+func (hub *GitHub) CreateSecret(ns, name string) (*Secret, error) {
 	token := hub.GetBearerToken()
 
 	dfClient := NewDataFoundryTokenClient(token)
@@ -237,7 +237,7 @@ func (hub *GitHub) CreateSecret(ns, name string) *Secret {
 	ksecret, err := dfClient.CreateSecret(ns, name, data)
 	if err != nil {
 		clog.Error(err)
-		return nil
+		return nil, err
 	}
 
 	secret := new(Secret)
@@ -249,7 +249,7 @@ func (hub *GitHub) CreateSecret(ns, name string) *Secret {
 	store.SaveSecretGithub(hub.User(), ns, secret)
 	clog.Debugf("%#v,%#v", ksecret, secret)
 
-	return secret
+	return secret, nil
 }
 
 func (hub *GitHub) CheckSecret(ns string) *Secret {

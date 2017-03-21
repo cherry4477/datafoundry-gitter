@@ -1,7 +1,7 @@
 package main
 
 import (
-//"golang.org/x/oauth2"
+	"time"
 )
 
 type Gitter interface {
@@ -14,7 +14,7 @@ type Gitter interface {
 	CreateWebhook(hook *WebHook) *WebHook
 	RemoveWebhook(ns, bc string, id int) error
 	CheckWebhook(ns, bc string) *WebHook
-	CreateSecret(ns, secret string) *Secret
+	CreateSecret(ns, secret string) (*Secret, error)
 	CheckSecret(ns string) *Secret
 	GetOauthToken() string
 	GetBearerToken() string
@@ -71,9 +71,11 @@ type hookParam struct {
 }
 
 type RSAKey struct {
-	Owner   *string
-	Pubkey  *string
-	Privkey *string
+	ID        int
+	Owner     *string
+	Pubkey    *string
+	Privkey   *string
+	CreatedAt *time.Time
 }
 
 type Secret struct {

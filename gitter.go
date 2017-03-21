@@ -45,7 +45,12 @@ func checkSecret(gitter Gitter, ns string) *Secret {
 	secret := gitter.CheckSecret(ns)
 	if secret == nil {
 		secretName := gitter.Source() + "-" + gitter.User() + "-" + randomStr(8)
-		secret = gitter.CreateSecret(ns, secretName)
+		if secret, err := gitter.CreateSecret(ns, secretName); err != nil {
+			return nil
+		} else {
+			return secret
+		}
+
 	}
 	return secret
 }

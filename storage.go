@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"github.com/zonesan/clog"
@@ -14,6 +15,7 @@ var hubStore = make(map[string]*oauth2.Token)
 var hookStore = make(map[string]*WebHook)
 
 var secretStore = make(map[string]*Secret)
+var sshkeyStore = make(map[string]*RSAKey)
 
 type Storage interface {
 	LoadTokenGitlab(user string) (*oauth2.Token, error)
@@ -161,8 +163,14 @@ func (rs *RedisStore) SaveSecretGithub(user, ns string, secret *Secret) error {
 }
 
 func (rs *RedisStore) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
-	return nil, nil
+	if key, ok := sshkeyStore[user]; !ok {
+		return nil, errors.New("not found")
+	} else {
+		return key, nil
+	}
 }
+
 func (rs *RedisStore) SaveSSHKeyGitlab(user string, key *RSAKey) error {
+	sshkeyStore[user] = key
 	return nil
 }

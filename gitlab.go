@@ -215,22 +215,29 @@ func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
 	return hook
 }
 
-func (lab *GitLab) deploySSHPubKey(pubkey string) error {
-	return nil
+func (lab *GitLab) deploySSHPubKey(pubkey string) (*gitlab.SSHKey, error) {
+	title := "datafoundry-pull-secret"
+	opt := &gitlab.AddSSHKeyOptions{
+		Title: &title,
+		Key:   &pubkey,
+	}
+	sshkey, resp, err := lab.client.Users.AddSSHKey(opt)
+	_ = resp
+	return sshkey, err
 }
 
 func (lab *GitLab) getSSHPrivateKey() (string, error) {
 	return "", nil
 }
 
-func (lab *GitLab) generateSSHeKeyPair() (privateKey, publicKey string, err error) {
+func (lab *GitLab) generateSSHeKeyPair() (*RSAKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return
+		return nil, err
 	}
 	err = priv.Validate()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	priv_der := x509.MarshalPKCS1PrivateKey(priv)
@@ -245,33 +252,60 @@ func (lab *GitLab) generateSSHeKeyPair() (privateKey, publicKey string, err erro
 
 	// Resultant private key in PEM format.
 	// priv_pem string
-	privateKey = string(pem.EncodeToMemory(&priv_blk))
+	privateKey := string(pem.EncodeToMemory(&priv_blk))
 	//println("private:", privateKey)
 
 	pub := priv.PublicKey
 
 	sshpub, err := ssh.NewPublicKey(&pub)
 	if err != nil {
-		return
+		return nil, err
 	}
-	publicKey = string(ssh.MarshalAuthorizedKey(sshpub))
+	publicKey := string(ssh.MarshalAuthorizedKey(sshpub))
 	publicKey = strings.TrimRight(publicKey, "\n")
 	publicKey = fmt.Sprintf("%s rsa-key-%s", publicKey, time.Now().Format("20060102"))
 	//println("public:", publicKey)
 
-	return
+	key := new(RSAKey)
+	key.Owner = &lab.user
+	key.Pubkey = &publicKey
+	key.Privkey = &privateKey
+
+	return key, nil
 
 }
 
-func (lab *GitLab) CreateSecret(ns, name string) *Secret {
+func (lab *GitLab) CreateSecret(ns, name string) (*Secret, error) {
 	token := lab.GetBearerToken()
 	dfClient := NewDataFoundryTokenClient(token)
+
+	key, err := store.LoadSSHKeyGitlab(lab.User())
+	if err != nil {
+		key, err = lab.generateSSHeKeyPair()
+		if err != nil {
+			clog.Error(err)
+			return nil, err
+		}
+		if sshkey, err := lab.deploySSHPubKey(*key.Pubkey); err != nil {
+			clog.Error(err)
+			return nil, err
+		} else {
+			key.ID = sshkey.ID
+			key.CreatedAt = sshkey.CreatedAt
+			// clog.Debugf("sshkey: %#v", sshkey)
+			clog.Debugf("key: %#v", key)
+		}
+
+		store.SaveSSHKeyGitlab(lab.User(), key)
+	}
+
 	data := make(map[string]string)
-	data["ssh-privatekey"] = "asd"
+	data["ssh-privatekey"] = *key.Privkey
+
 	ksecret, err := dfClient.CreateSecret(ns, name, data)
 	if err != nil {
 		clog.Error(err)
-		return nil
+		return nil, err
 	}
 	secret := new(Secret)
 	secret.User = lab.User()
@@ -281,7 +315,7 @@ func (lab *GitLab) CreateSecret(ns, name string) *Secret {
 	store.SaveSecretGithub(lab.User(), ns, secret)
 	clog.Debugf("%#v,%#v", ksecret, secret)
 
-	return secret
+	return secret, nil
 }
 
 func (lab *GitLab) CheckSecret(ns string) *Secret {
