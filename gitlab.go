@@ -55,8 +55,16 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 
 }
 
-func (lab *GitLab) ListPersonalRepos() *[]Repositories {
+func (lab *GitLab) ListPersonalRepos(cache bool) *[]Repositories {
 	// clog.Debugf("list repos of %s called.", user)
+	if cache {
+		if repos, err := store.LoadReposGitlab(lab.User()); err == nil {
+			if len(*repos) > 0 {
+				return repos
+			}
+			clog.Warn("cache empty, fetching from remote server.")
+		}
+	}
 
 	var allRepos []*gitlab.Project
 
@@ -109,6 +117,10 @@ func (lab *GitLab) ListPersonalRepos() *[]Repositories {
 	}
 
 	//debug(labRepos)
+
+	if len(*labRepos) > 0 {
+		store.SaveReposGitlab(lab.User(), labRepos)
+	}
 
 	return labRepos
 
@@ -230,7 +242,7 @@ func (lab *GitLab) getSSHPrivateKey() (string, error) {
 	return "", nil
 }
 
-func (lab *GitLab) generateSSHeKeyPair() (*RSAKey, error) {
+func (lab *GitLab) generateSSHeKeyPair() (*SSHKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
@@ -266,7 +278,7 @@ func (lab *GitLab) generateSSHeKeyPair() (*RSAKey, error) {
 	publicKey = fmt.Sprintf("%s rsa-key-%s", publicKey, time.Now().Format("20060102"))
 	//println("public:", publicKey)
 
-	key := new(RSAKey)
+	key := new(SSHKey)
 	key.Owner = &lab.user
 	key.Pubkey = &publicKey
 	key.Privkey = &privateKey

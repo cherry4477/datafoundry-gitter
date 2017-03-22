@@ -9,9 +9,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func listPersonalRepos(gitter Gitter) *[]Repositories {
+func listPersonalRepos(gitter Gitter, cache bool) *[]Repositories {
 	clog.Debug("listPersonalRepos interface")
-	return gitter.ListPersonalRepos()
+	return gitter.ListPersonalRepos(cache)
 }
 
 func listOrgRepos(gitter Gitter, org string) {
@@ -64,21 +64,6 @@ func removeWebhook(gitter Gitter, ns, bc, hookid string) error {
 	}
 	return gitter.RemoveWebhook(ns, bc, id)
 }
-
-// func checkWebhook(gitter Gitter, hook interface{}) {
-// 	clog.Debug("checkWebhook interface")
-// 	gitter.CheckWebhook(hook)
-// }
-
-// func loadToken(gitter Gitter) (*oauth2.Token, error) {
-// 	clog.Debug("loadToken interface")
-// 	return gitter.LoadToken()
-// }
-
-// func saveToken(gitter Gitter, tok *oauth2.Token) error {
-// 	clog.Debug("saveToken interface")
-// 	return gitter.SaveToken(tok)
-// }
 
 func loadGitLabToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitLabToken interface")

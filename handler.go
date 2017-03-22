@@ -94,8 +94,14 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))
 		return
 	}
+	c := r.FormValue("cache")
+	var cache bool = false
+	if c == "true" {
+		clog.Debug("using repos cache.")
+		cache = true
+	}
 	// repos := gitter.ListPersonalRepos(user)
-	repos := listPersonalRepos(gitter)
+	repos := listPersonalRepos(gitter, cache)
 	RespOK(w, repos)
 }
 

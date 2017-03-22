@@ -25,8 +25,14 @@ func gitlabUserSecretKey(namespace, user string) string {
 func githubUserSecretKey(namespace, user string) string {
 	return "gitter://github/secret/" + namespace + "/" + user
 }
-func gitlabUserSSHKey(user string) string {
+func gitlabUserSSHKeyPairKey(user string) string {
 	return "gitter://gitlab/sshkey/" + user
+}
+func githubUserReposKey(user string) string {
+	return "gitter://github/repos/" + user
+}
+func gitlabUserReposKey(user string) string {
+	return "gitter://gitlab/repos/" + user
 }
 
 //=======================================================
@@ -58,8 +64,13 @@ type Storage interface {
 	LoadSecretGithub(user, ns string) (*Secret, error)
 	SaveSecretGithub(user, ns string, secret *Secret) error
 
-	LoadSSHKeyGitlab(user string) (*RSAKey, error)
-	SaveSSHKeyGitlab(user string, key *RSAKey) error
+	LoadSSHKeyGitlab(user string) (*SSHKey, error)
+	SaveSSHKeyGitlab(user string, key *SSHKey) error
+
+	LoadReposGitlab(user string) (*[]Repositories, error)
+	SaveReposGitlab(user string, repos *[]Repositories) error
+	LoadReposGithub(user string) (*[]Repositories, error)
+	SaveReposGithub(user string, repos *[]Repositories) error
 }
 
 var _ Storage = &storage{}
@@ -89,18 +100,19 @@ type storage struct {
 func (s *storage) Load(key string, into interface{}) error {
 	data, err := s.Get(key)
 	if err != nil {
-		clog.Debugf("load (%s) error: %s", key, err)
+		clog.Errorf("load (%s) error: %s", key, err)
 		return err
 	}
 
 	// todo: ok?
 	if data == nil {
+		clog.Warn(StorageErr_NotFound)
 		return StorageErr_NotFound
 	}
 
 	err = json.Unmarshal(data, into)
 	if err != nil {
-		clog.Debugf("unmarshal (%s) data (%s) error: %s", key, string(data), err)
+		clog.Errorf("unmarshal (%s) data (%s) error: %s", key, string(data), err)
 		return err
 	}
 
@@ -110,13 +122,13 @@ func (s *storage) Load(key string, into interface{}) error {
 func (s *storage) Save(key string, obj interface{}) error {
 	data, err := json.Marshal(obj)
 	if err != nil {
-		clog.Debugf("marshal (%s) auth token (%v) error: %s", key, obj, err)
+		clog.Errorf("marshal (%s) auth token (%v) error: %s", key, obj, err)
 		return err
 	}
 
 	err = s.Set(key, data)
 	if err != nil {
-		clog.Debugf("save (%s) error: %s", key, err)
+		clog.Errorf("save (%s) error: %s", key, err)
 		return err
 	}
 
@@ -194,17 +206,41 @@ func (s *storage) SaveSecretGithub(user, ns string, secret *Secret) error {
 	return s.Save(githubUserSecretKey(ns, user), secret)
 }
 
-func (s *storage) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
-	var key = &RSAKey{}
-	if err := s.Load(gitlabUserSSHKey(user), key); err != nil {
+func (s *storage) LoadSSHKeyGitlab(user string) (*SSHKey, error) {
+	var key = &SSHKey{}
+	if err := s.Load(gitlabUserSSHKeyPairKey(user), key); err != nil {
 		return nil, err
 	}
 
 	return key, nil
 }
 
-func (s *storage) SaveSSHKeyGitlab(user string, key *RSAKey) error {
-	return s.Save(gitlabUserSSHKey(user), key)
+func (s *storage) SaveSSHKeyGitlab(user string, key *SSHKey) error {
+	return s.Save(gitlabUserSSHKeyPairKey(user), key)
+}
+
+func (s *storage) LoadReposGitlab(user string) (*[]Repositories, error) {
+	repos := new([]Repositories)
+	if err := s.Load(gitlabUserReposKey(user), repos); err != nil {
+		return nil, err
+	}
+	return repos, nil
+}
+
+func (s *storage) SaveReposGitlab(user string, repos *[]Repositories) error {
+	return s.Save(gitlabUserReposKey(user), repos)
+}
+
+func (s *storage) LoadReposGithub(user string) (*[]Repositories, error) {
+	repos := new([]Repositories)
+	if err := s.Load(githubUserReposKey(user), repos); err != nil {
+		return nil, err
+	}
+	return repos, nil
+}
+
+func (s *storage) SaveReposGithub(user string, repos *[]Repositories) error {
+	return s.Save(githubUserReposKey(user), repos)
 }
 
 //=======================================================

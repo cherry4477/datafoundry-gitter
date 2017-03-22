@@ -50,7 +50,16 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	return hub
 }
 
-func (hub *GitHub) ListPersonalRepos() *[]Repositories {
+func (hub *GitHub) ListPersonalRepos(cache bool) *[]Repositories {
+
+	if cache {
+		if repos, err := store.LoadReposGithub(hub.User()); err == nil {
+			if len(*repos) > 0 {
+				return repos
+			}
+			clog.Warn("cache empty, fetching from remote server.")
+		}
+	}
 
 	var allRepos []*github.Repository
 
@@ -102,7 +111,11 @@ func (hub *GitHub) ListPersonalRepos() *[]Repositories {
 		*hubRepos = append(*hubRepos, *repo)
 	}
 
-	debug(hubRepos)
+	// debug(hubRepos)
+
+	if len(*hubRepos) > 0 {
+		store.SaveReposGithub(hub.User(), hubRepos)
+	}
 
 	return hubRepos
 

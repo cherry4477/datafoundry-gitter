@@ -7,7 +7,7 @@ import (
 type Gitter interface {
 	Source() string
 	User() string
-	ListPersonalRepos() *[]Repositories
+	ListPersonalRepos(cache bool) *[]Repositories
 	ListOrgRepos(org string)
 	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
@@ -70,7 +70,7 @@ type hookParam struct {
 	URL  string `json:"url"`
 }
 
-type RSAKey struct {
+type SSHKey struct {
 	ID        int
 	Owner     *string
 	Pubkey    *string
