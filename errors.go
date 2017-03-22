@@ -63,12 +63,24 @@ func (e *ErrorMessage) Error() string {
 
 func (e *ErrorMessage) New(code int) error {
 	e.Code = code
-
 	e.Message = ErrText(code)
+
+	return e
+}
+
+func (e *ErrorMessage) NewMsg(code int, msg string) error {
+	e.Code = code
+	e.Message = msg
+
 	return e
 }
 
 func ErrorNew(code int) error {
 	var e ErrorMessage
 	return e.New(code)
+}
+
+func ErrorNewMsg(code int, msg string) error {
+	var e ErrorMessage
+	return e.NewMsg(code, msg)
 }

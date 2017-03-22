@@ -127,7 +127,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		ns, repo = r.FormValue("ns"), r.FormValue("repo")
 		if len(ns) == 0 || len(repo) == 0 {
-			http.Error(w, "ns or repo empty", http.StatusBadRequest)
+			RespError(w, ErrorNewMsg(ErrCodeBadRequest, "ns or repo empty"))
 			return
 		}
 	case "gitlab":
@@ -139,7 +139,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		repo = r.FormValue("id")
 		if len(repo) == 0 {
-			http.Error(w, "id empty", http.StatusBadRequest)
+			RespError(w, ErrorNewMsg(ErrCodeBadRequest, "id empty"))
 			return
 		}
 	default:
@@ -191,7 +191,7 @@ func handleSecret(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	}
 
 	if len(ns) == 0 {
-		http.Error(w, "ns empty", http.StatusBadRequest)
+		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "ns empty"))
 		return
 	}
 
@@ -230,7 +230,7 @@ func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
 	if len(ns) == 0 || len(bc) == 0 {
-		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "ns or bc empty"))
 		return
 	}
 
@@ -275,7 +275,7 @@ func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
 	if len(ns) == 0 || len(bc) == 0 {
-		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "ns or bc empty"))
 		return
 	}
 
@@ -320,7 +320,7 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
 	if len(ns) == 0 || len(bc) == 0 {
-		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "ns or bc empty"))
 		return
 	}
 
@@ -340,7 +340,7 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	redirect_url := r.FormValue("redirect_url")
 	if len(redirect_url) == 0 {
-		http.Error(w, "redirect_url empty", http.StatusBadRequest)
+		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "redirect_url empty"))
 		return
 	}
 
