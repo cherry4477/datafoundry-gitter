@@ -1,32 +1,32 @@
 package main
 
 import (
-	"fmt"
-	"time"
 	"encoding/json"
-	"sync"
+	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
-	"github.com/garyburd/redigo/redis"
+	"sync"
+	"time"
 )
 
 func gitlabUserAuthTokenKey(user string) string {
-	return "gitlab/oauthtoken/" + user
+	return "gitter://gitlab/oauthtoken/" + user
 }
 func githubUserAuthTokenKey(user string) string {
-	return "github/oauthtoken/" + user
+	return "gitter://github/oauthtoken/" + user
 }
 func webhookKey(key string) string {
-	return "webhook/" + key
+	return "gitter://webhook/" + key
 }
 func gitlabUserSecretKey(namespace, user string) string {
-	return "gitlab/secret/" + namespace + "/" + user
+	return "gitter://gitlab/secret/" + namespace + "/" + user
 }
 func githubUserSecretKey(namespace, user string) string {
-	return "github/secret/" + namespace + "/" + user
+	return "gitter://github/secret/" + namespace + "/" + user
 }
-func gitlabUserKeyFilesKey(user string) string {
-	return "gitlab/keys/" + user
+func gitlabUserSSHKey(user string) string {
+	return "gitter://gitlab/sshkey/" + user
 }
 
 //=======================================================
@@ -34,6 +34,7 @@ func gitlabUserKeyFilesKey(user string) string {
 //=======================================================
 
 type storageError string
+
 func (se storageError) Error() string {
 	return string(se)
 }
@@ -56,10 +57,11 @@ type Storage interface {
 	SaveSecretGitlab(user, ns string, secret *Secret) error
 	LoadSecretGithub(user, ns string) (*Secret, error)
 	SaveSecretGithub(user, ns string, secret *Secret) error
-	
+
 	LoadSSHKeyGitlab(user string) (*RSAKey, error)
 	SaveSSHKeyGitlab(user string, key *RSAKey) error
 }
+
 var _ Storage = &storage{}
 
 type KeyValueStorager interface {
@@ -68,6 +70,7 @@ type KeyValueStorager interface {
 	//List(keyPrefix string)(<-chan struct{key, value []byte}, chan<- struct{})
 	Delete(key string) error
 }
+
 var _ KeyValueStorager = &memoryStorager{}
 var _ KeyValueStorager = &redisStorager{}
 
@@ -89,7 +92,7 @@ func (s *storage) Load(key string, into interface{}) error {
 		clog.Debugf("load (%s) error: %s", key, err)
 		return err
 	}
-	
+
 	// todo: ok?
 	if data == nil {
 		return StorageErr_NotFound
@@ -190,10 +193,10 @@ func (s *storage) LoadSecretGithub(user, ns string) (*Secret, error) {
 func (s *storage) SaveSecretGithub(user, ns string, secret *Secret) error {
 	return s.Save(githubUserSecretKey(ns, user), secret)
 }
-	
+
 func (s *storage) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
 	var key = &RSAKey{}
-	if err := s.Load(gitlabUserKeyFilesKey(user), key); err != nil {
+	if err := s.Load(gitlabUserSSHKey(user), key); err != nil {
 		return nil, err
 	}
 
@@ -201,7 +204,7 @@ func (s *storage) LoadSSHKeyGitlab(user string) (*RSAKey, error) {
 }
 
 func (s *storage) SaveSSHKeyGitlab(user string, key *RSAKey) error {
-	return s.Save(gitlabUserKeyFilesKey(user), key)
+	return s.Save(gitlabUserSSHKey(user), key)
 }
 
 //=======================================================

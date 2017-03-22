@@ -116,6 +116,10 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			return
 		}
 		ns, repo = r.FormValue("ns"), r.FormValue("repo")
+		if len(ns) == 0 || len(repo) == 0 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
@@ -123,6 +127,10 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			return
 		}
 		repo = r.FormValue("id")
+		if len(repo) == 0 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))

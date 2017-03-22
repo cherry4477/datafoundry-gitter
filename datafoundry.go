@@ -67,7 +67,7 @@ func (c *DataFoundryClient) CreateSecret(ns, name string, data map[string]string
 	sReq.Name = name
 	sReq.Data = make(map[string][]byte)
 
-	clog.Debugf("%v", data)
+	// clog.Debugf("%v", data)
 
 	for key, value := range data {
 		sReq.Data[key] = []byte(value)
