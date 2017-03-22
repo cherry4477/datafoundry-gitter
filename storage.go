@@ -336,8 +336,6 @@ func (ms *redisStorager) Get(key string) ([]byte, error) {
 	defer c.Close()
 
 	b, err := redis.Bytes(c.Do("GET", key))
-	switch {
-	}
 	if err != nil {
 		if err == redis.ErrNil {
 			return nil, StorageErr_NotFound
