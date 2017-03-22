@@ -113,9 +113,11 @@ func (hub *GitHub) ListPersonalRepos(cache bool) *[]Repositories {
 
 	// debug(hubRepos)
 
-	if len(*hubRepos) > 0 {
-		store.SaveReposGithub(hub.User(), hubRepos)
-	}
+	go func() {
+		if len(*hubRepos) > 0 {
+			store.SaveReposGithub(hub.User(), hubRepos)
+		}
+	}()
 
 	return hubRepos
 

@@ -118,9 +118,11 @@ func (lab *GitLab) ListPersonalRepos(cache bool) *[]Repositories {
 
 	//debug(labRepos)
 
-	if len(*labRepos) > 0 {
-		store.SaveReposGitlab(lab.User(), labRepos)
-	}
+	go func() {
+		if len(*labRepos) > 0 {
+			store.SaveReposGitlab(lab.User(), labRepos)
+		}
+	}()
 
 	return labRepos
 
