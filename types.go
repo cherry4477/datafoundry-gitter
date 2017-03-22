@@ -1,17 +1,24 @@
 package main
 
 import (
-//"golang.org/x/oauth2"
+	"time"
 )
 
 type Gitter interface {
-	ListPersonalRepos(user string) *[]Repositories
+	Source() string
+	User() string
+	ListPersonalRepos(cache bool) *[]Repositories
 	ListOrgRepos(org string)
 	ListBranches(owner, repo string) *[]Branch
 	ListTags(owner, repo string)
 	CreateWebhook(hook *WebHook) *WebHook
 	RemoveWebhook(ns, bc string, id int) error
 	CheckWebhook(ns, bc string) *WebHook
+	CreateSecret(ns, secret string) (*Secret, error)
+	CheckSecret(ns string) *Secret
+	GetOauthToken() string
+	GetBearerToken() string
+	SetBearerToken(bearer string)
 	// SaveToken(tok *oauth2.Token) error
 	// LoadToken() (*oauth2.Token, error)
 }
@@ -61,6 +68,21 @@ type hookParam struct {
 	Repo string `json:"repo,omitempty"`
 	Pid  string `json:"id,omitempty"`
 	URL  string `json:"url"`
+}
+
+type SSHKey struct {
+	ID        int
+	Owner     *string
+	Pubkey    *string
+	Privkey   *string
+	CreatedAt *time.Time
+}
+
+type Secret struct {
+	Ns        string `json:"namespace"`
+	User      string `json:"user"`
+	Secret    string `json:"secret"`
+	Available bool   `json:"available"`
 }
 
 var (

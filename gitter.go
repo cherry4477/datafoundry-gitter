@@ -9,9 +9,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func listPersonalRepos(gitter Gitter, user string) *[]Repositories {
+func listPersonalRepos(gitter Gitter, cache bool) *[]Repositories {
 	clog.Debug("listPersonalRepos interface")
-	return gitter.ListPersonalRepos(user)
+	return gitter.ListPersonalRepos(cache)
 }
 
 func listOrgRepos(gitter Gitter, org string) {
@@ -40,6 +40,21 @@ func checkWebhook(gitter Gitter, ns, bc string) *WebHook {
 	return gitter.CheckWebhook(ns, bc)
 }
 
+func checkSecret(gitter Gitter, ns string) *Secret {
+	clog.Debug("checkSecret interface")
+	secret := gitter.CheckSecret(ns)
+	if secret == nil {
+		secretName := gitter.Source() + "-" + gitter.User() + "-" + randomStr(8)
+		if secret, err := gitter.CreateSecret(ns, secretName); err != nil {
+			return nil
+		} else {
+			return secret
+		}
+
+	}
+	return secret
+}
+
 func removeWebhook(gitter Gitter, ns, bc, hookid string) error {
 	clog.Debug("removeWebhook interface")
 	id, err := strconv.Atoi(hookid)
@@ -49,21 +64,6 @@ func removeWebhook(gitter Gitter, ns, bc, hookid string) error {
 	}
 	return gitter.RemoveWebhook(ns, bc, id)
 }
-
-// func checkWebhook(gitter Gitter, hook interface{}) {
-// 	clog.Debug("checkWebhook interface")
-// 	gitter.CheckWebhook(hook)
-// }
-
-// func loadToken(gitter Gitter) (*oauth2.Token, error) {
-// 	clog.Debug("loadToken interface")
-// 	return gitter.LoadToken()
-// }
-
-// func saveToken(gitter Gitter, tok *oauth2.Token) error {
-// 	clog.Debug("saveToken interface")
-// 	return gitter.SaveToken(tok)
-// }
 
 func loadGitLabToken(store Storage, user string) *oauth2.Token {
 	clog.Debug("loadGitLabToken interface")
@@ -114,6 +114,10 @@ func newLabGitter(user string) (Gitter, error) {
 		clog.Error(errStr)
 		return nil, errors.New(errStr)
 	}
+
+	// NEVER FORGET THIS
+	gitter.user = user
+
 	return gitter, nil
 }
 
@@ -131,6 +135,8 @@ func newHubGitter(user string) (Gitter, error) {
 		clog.Error(errStr)
 		return nil, errors.New(errStr)
 	}
-	return gitter, nil
 
+	// NEVER FORGET THIS
+	gitter.user = user
+	return gitter, nil
 }

@@ -12,12 +12,15 @@ import (
 )
 
 type GitHub struct {
-	client *github.Client
-	source string
-	owner  string
-	repo   string
-	ns     string
-	bc     string
+	client      *github.Client
+	source      string
+	oauthtoken  string
+	bearertoken string
+	owner       string
+	repo        string
+	ns          string
+	bc          string
+	user        string
 }
 
 func NewGitHub(tok *oauth2.Token) *GitHub {
@@ -30,16 +33,33 @@ func NewGitHub(tok *oauth2.Token) *GitHub {
 	// 	token = tok
 	// }
 
+	if tok == nil {
+		clog.Error("not authorized yet.")
+		return nil
+	}
+
 	oauthClient := oauthConf.Client(oauth2.NoContext, tok)
+
+	clog.Debug("token:", tok.AccessToken)
 
 	client := github.NewClient(oauthClient)
 
 	hub.client = client
+	hub.oauthtoken = tok.AccessToken
 
 	return hub
 }
 
-func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
+func (hub *GitHub) ListPersonalRepos(cache bool) *[]Repositories {
+
+	if cache {
+		if repos, err := store.LoadReposGithub(hub.User()); err == nil {
+			if len(*repos) > 0 {
+				return repos
+			}
+			clog.Warn("cache empty, fetching from remote server.")
+		}
+	}
 
 	var allRepos []*github.Repository
 
@@ -91,7 +111,11 @@ func (hub *GitHub) ListPersonalRepos(user string) *[]Repositories {
 		*hubRepos = append(*hubRepos, *repo)
 	}
 
-	debug(hubRepos)
+	// debug(hubRepos)
+
+	if len(*hubRepos) > 0 {
+		store.SaveReposGithub(hub.User(), hubRepos)
+	}
 
 	return hubRepos
 
@@ -213,6 +237,60 @@ func (hub *GitHub) CheckWebhook(ns, bc string) *WebHook {
 		and if not, remove record from db.
 	*/
 	return hook
+}
+
+func (hub *GitHub) CreateSecret(ns, name string) (*Secret, error) {
+	token := hub.GetBearerToken()
+
+	dfClient := NewDataFoundryTokenClient(token)
+
+	data := make(map[string]string)
+	data["password"] = hub.GetOauthToken()
+
+	ksecret, err := dfClient.CreateSecret(ns, name, data)
+	if err != nil {
+		clog.Error(err)
+		return nil, err
+	}
+
+	secret := new(Secret)
+	secret.User = hub.User()
+	secret.Secret = ksecret.Name
+	secret.Ns = ns
+	secret.Available = true
+
+	store.SaveSecretGithub(hub.User(), ns, secret)
+	clog.Debugf("%#v,%#v", ksecret, secret)
+
+	return secret, nil
+}
+
+func (hub *GitHub) CheckSecret(ns string) *Secret {
+	//key := hub.Source() + "/" + hub.User() + "/" + ns
+	secret, _ := store.LoadSecretGithub(hub.User(), ns)
+	if secret == nil {
+		clog.Warn("secret is nil")
+	}
+	return secret
+}
+
+func (hub *GitHub) Source() string {
+	return hub.source
+}
+
+func (hub *GitHub) User() string {
+	return hub.user
+}
+
+func (hub *GitHub) GetOauthToken() string {
+	return hub.oauthtoken
+}
+
+func (hub *GitHub) GetBearerToken() string {
+	return hub.bearertoken
+}
+func (hub *GitHub) SetBearerToken(bearer string) {
+	hub.bearertoken = bearer
 }
 
 func ListPersonalRepos(client *github.Client, user string) error {

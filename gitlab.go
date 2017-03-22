@@ -1,19 +1,30 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	gitlab "github.com/xanzy/go-gitlab"
 	"github.com/zonesan/clog"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/oauth2"
 )
 
 type GitLab struct {
-	client *gitlab.Client
-	source string
-	repoid string
-	ns     string
-	bc     string
+	client      *gitlab.Client
+	source      string
+	oauthtoken  string
+	bearertoken string
+	repoid      string
+	ns          string
+	bc          string
+	user        string
 }
 
 func NewGitLab(tok *oauth2.Token) *GitLab {
@@ -32,18 +43,28 @@ func NewGitLab(tok *oauth2.Token) *GitLab {
 	}
 
 	oauthClient := oauthConfGitLab.Client(oauth2.NoContext, tok)
+	clog.Debug("token:", tok.AccessToken)
 
 	client := gitlab.NewOAuthClient(oauthClient, tok.AccessToken)
 	client.SetBaseURL(gitlabBaseURL + "/api/v3")
 
 	lab.client = client
+	lab.oauthtoken = tok.AccessToken
 
 	return lab
 
 }
 
-func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
+func (lab *GitLab) ListPersonalRepos(cache bool) *[]Repositories {
 	// clog.Debugf("list repos of %s called.", user)
+	if cache {
+		if repos, err := store.LoadReposGitlab(lab.User()); err == nil {
+			if len(*repos) > 0 {
+				return repos
+			}
+			clog.Warn("cache empty, fetching from remote server.")
+		}
+	}
 
 	var allRepos []*gitlab.Project
 
@@ -96,6 +117,10 @@ func (lab *GitLab) ListPersonalRepos(user string) *[]Repositories {
 	}
 
 	//debug(labRepos)
+
+	if len(*labRepos) > 0 {
+		store.SaveReposGitlab(lab.User(), labRepos)
+	}
 
 	return labRepos
 
@@ -200,4 +225,134 @@ func (lab *GitLab) CheckWebhook(ns, bc string) *WebHook {
 		should check err of store.GetWebHook(key) ?
 	*/
 	return hook
+}
+
+func (lab *GitLab) deploySSHPubKey(pubkey string) (*gitlab.SSHKey, error) {
+	title := "datafoundry-pull-secret"
+	opt := &gitlab.AddSSHKeyOptions{
+		Title: &title,
+		Key:   &pubkey,
+	}
+	sshkey, resp, err := lab.client.Users.AddSSHKey(opt)
+	_ = resp
+	return sshkey, err
+}
+
+func (lab *GitLab) getSSHPrivateKey() (string, error) {
+	return "", nil
+}
+
+func (lab *GitLab) generateSSHeKeyPair() (*SSHKey, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	err = priv.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	priv_der := x509.MarshalPKCS1PrivateKey(priv)
+
+	// pem.Block
+	// blk pem.Block
+	priv_blk := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   priv_der,
+	}
+
+	// Resultant private key in PEM format.
+	// priv_pem string
+	privateKey := string(pem.EncodeToMemory(&priv_blk))
+	//println("private:", privateKey)
+
+	pub := priv.PublicKey
+
+	sshpub, err := ssh.NewPublicKey(&pub)
+	if err != nil {
+		return nil, err
+	}
+	publicKey := string(ssh.MarshalAuthorizedKey(sshpub))
+	publicKey = strings.TrimRight(publicKey, "\n")
+	publicKey = fmt.Sprintf("%s rsa-key-%s", publicKey, time.Now().Format("20060102"))
+	//println("public:", publicKey)
+
+	key := new(SSHKey)
+	key.Owner = &lab.user
+	key.Pubkey = &publicKey
+	key.Privkey = &privateKey
+
+	return key, nil
+
+}
+
+func (lab *GitLab) CreateSecret(ns, name string) (*Secret, error) {
+	token := lab.GetBearerToken()
+	dfClient := NewDataFoundryTokenClient(token)
+
+	key, err := store.LoadSSHKeyGitlab(lab.User())
+	if err != nil {
+		key, err = lab.generateSSHeKeyPair()
+		if err != nil {
+			clog.Error(err)
+			return nil, err
+		}
+		if sshkey, err := lab.deploySSHPubKey(*key.Pubkey); err != nil {
+			clog.Error(err)
+			return nil, err
+		} else {
+			key.ID = sshkey.ID
+			key.CreatedAt = sshkey.CreatedAt
+			// clog.Debugf("sshkey: %#v", sshkey)
+			clog.Debugf("key: %#v", key)
+		}
+
+		store.SaveSSHKeyGitlab(lab.User(), key)
+	}
+
+	data := make(map[string]string)
+	data["ssh-privatekey"] = *key.Privkey
+
+	ksecret, err := dfClient.CreateSecret(ns, name, data)
+	if err != nil {
+		clog.Error(err)
+		return nil, err
+	}
+	secret := new(Secret)
+	secret.User = lab.User()
+	secret.Secret = ksecret.Name
+	secret.Ns = ns
+	secret.Available = true
+	store.SaveSecretGitlab(lab.User(), ns, secret)
+	//clog.Debugf("%#v,%#v", ksecret, secret)
+
+	return secret, nil
+}
+
+func (lab *GitLab) CheckSecret(ns string) *Secret {
+	//key := hub.Source() + "/" + hub.User() + "/" + ns
+	secret, _ := store.LoadSecretGitlab(lab.User(), ns)
+	if secret == nil {
+		clog.Warn("secret is nil")
+	}
+	return secret
+}
+
+func (lab *GitLab) Source() string {
+	return lab.source
+}
+
+func (lab *GitLab) User() string {
+	return lab.user
+}
+
+func (lab *GitLab) GetOauthToken() string {
+	return lab.oauthtoken
+}
+func (lab *GitLab) GetBearerToken() string {
+	return lab.bearertoken
+}
+func (lab *GitLab) SetBearerToken(bearer string) {
+	lab.bearertoken = bearer
 }
