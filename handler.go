@@ -80,26 +80,29 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
+
 	c := r.FormValue("cache")
 	var cache bool = false
 	if c == "true" {
 		clog.Debug("using repos cache.")
 		cache = true
 	}
+
 	// repos := gitter.ListPersonalRepos(user)
 	repos := listPersonalRepos(gitter, cache)
 	RespOK(w, repos)
@@ -118,7 +121,8 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 		ns, repo = r.FormValue("ns"), r.FormValue("repo")
@@ -129,7 +133,8 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 		repo = r.FormValue("id")
@@ -162,24 +167,26 @@ func handleSecret(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
 
 	token := r.Header.Get("Authorization")
 	if len(token) == 0 || len(user) == 0 {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		// http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		RespError(w, ErrorNew(ErrCodeUnauthorized))
 		return
 	}
 
@@ -205,18 +212,19 @@ func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
 
@@ -242,26 +250,26 @@ func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
 
 	hook := new(WebHook)
 	if err := parseRequestBody(r, hook); err != nil {
 		clog.Error("read request body error.", err)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(http.StatusText(http.StatusBadRequest)))
+		RespError(w, ErrorNew(ErrCodeInvalidParam))
 		return
 	}
 
@@ -274,8 +282,7 @@ func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	hook = createWebhook(gitter, ns, bc, hook)
 
 	if hook == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(http.StatusText(http.StatusBadRequest)))
+		RespError(w, ErrorNew(ErrCodeBadRequest))
 		return
 	}
 
@@ -295,18 +302,19 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	case "github":
 		gitter, err = newHubGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/github", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	case "gitlab":
 		gitter, err = newLabGitter(user)
 		if err != nil {
-			http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			// http.Redirect(w, r, "/authorize/gitlab", http.StatusFound)
+			RespError(w, ErrorNew(ErrCodeUnauthorized))
 			return
 		}
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
 
@@ -318,8 +326,7 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	err = removeWebhook(gitter, ns, bc, hookid)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		RespError(w, err)
 		return
 	}
 	RespOK(w, nil)
@@ -331,16 +338,26 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 	source := ps.ByName("source")
 	user := r.Header.Get("user")
 
+	redirect_url := r.FormValue("redirect_url")
+	if len(redirect_url) == 0 {
+		http.Error(w, "redirect_url empty", http.StatusBadRequest)
+		return
+	}
+
+	queryStr := "?redirect_url=" + redirect_url + "&user=" + user
+	clog.Debug("queryStr:", queryStr)
+
 	switch source {
 	case "github":
-		oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=/repos/github&user=" + user
+		// oauthConf.RedirectURL = gitHubCallBackURL + "?redirect_url=/repos/github&user=" + user
+		oauthConf.RedirectURL = gitHubCallBackURL + queryStr
 		url = oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	case "gitlab":
-		oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=/repos/gitlab&user=" + user
+		// oauthConfGitLab.RedirectURL = gitLabCallBackURL + "?redirect_url=/repos/gitlab&user=" + user
+		oauthConfGitLab.RedirectURL = gitLabCallBackURL + queryStr
 		url = oauthConfGitLab.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(http.StatusText(http.StatusNotFound)))
+		RespError(w, ErrorNew(ErrCodeNotFound))
 		return
 	}
 	//user and redirect_url must be set here.
