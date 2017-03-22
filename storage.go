@@ -355,8 +355,8 @@ func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorag
 	return &redisStorager{pool: p}
 }
 
-func (ms *redisStorager) Set(key string, value []byte) error {
-	c := ms.pool.Get()
+func (rs *redisStorager) Set(key string, value []byte) error {
+	c := rs.pool.Get()
 	defer c.Close()
 
 	if _, err := c.Do("SET", key, value); err != nil {
@@ -367,8 +367,8 @@ func (ms *redisStorager) Set(key string, value []byte) error {
 	return nil
 }
 
-func (ms *redisStorager) Get(key string) ([]byte, error) {
-	c := ms.pool.Get()
+func (rs *redisStorager) Get(key string) ([]byte, error) {
+	c := rs.pool.Get()
 	defer c.Close()
 
 	b, err := redis.Bytes(c.Do("GET", key))
@@ -384,8 +384,8 @@ func (ms *redisStorager) Get(key string) ([]byte, error) {
 	return b, nil
 }
 
-func (ms *redisStorager) Delete(key string) error {
-	c := ms.pool.Get()
+func (rs *redisStorager) Delete(key string) error {
+	c := rs.pool.Get()
 	defer c.Close()
 
 	if _, err := c.Do("DEL", key); err != nil {

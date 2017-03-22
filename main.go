@@ -66,10 +66,10 @@ func init() {
 			}
 
 			redisStorager = NewRedisKeyValueStorager(
-				words[0] + ":" +  words[1],
+				words[0]+":"+words[1],
 				"", // blank clusterName means no sentinel servers
-				strings.Join(words[2:], "+", // password
-				),
+				strings.Join(words[2:], "+"),// password
+
 			)
 
 			clog.Info("redis storage created with REDIS_SERVER_PARAMS:", redisParams)
@@ -115,7 +115,7 @@ func init() {
 
 			var credential = &redisServices[0].Credential
 			redisStorager = NewRedisKeyValueStorager(
-				credential.Host + ":" + credential.Port,
+				credential.Host+":"+credential.Port,
 				credential.Name,
 				credential.Password,
 			)
@@ -129,6 +129,7 @@ func init() {
 	} else {
 		store = NewStorage(NewMemoryKeyValueStorager())
 
-		clog.Warn("redis storage is not reachable, use memory storage instead")
+		clog.Warn("redis storage is not reachable, use memory storage instead.")
+		clog.Warn("REDIS STORAGE IS NOT REACHABLE, USE MEMORY STORAGE INSTEAD.")
 	}
 }

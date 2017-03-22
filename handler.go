@@ -123,7 +123,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		ns, repo = r.FormValue("ns"), r.FormValue("repo")
 		if len(ns) == 0 || len(repo) == 0 {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(w, "ns or repo empty", http.StatusBadRequest)
 			return
 		}
 	case "gitlab":
@@ -134,7 +134,7 @@ func handleRepoBranches(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		repo = r.FormValue("id")
 		if len(repo) == 0 {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(w, "id empty", http.StatusBadRequest)
 			return
 		}
 	default:
@@ -184,7 +184,7 @@ func handleSecret(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	}
 
 	if len(ns) == 0 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, "ns empty", http.StatusBadRequest)
 		return
 	}
 
@@ -221,6 +221,11 @@ func handleCheckWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
+	if len(ns) == 0 || len(bc) == 0 {
+		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		return
+	}
+
 	hook := checkWebhook(gitter, ns, bc)
 	RespOK(w, hook)
 }
@@ -261,6 +266,10 @@ func handleCreateWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
+	if len(ns) == 0 || len(bc) == 0 {
+		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		return
+	}
 
 	hook = createWebhook(gitter, ns, bc, hook)
 
@@ -300,7 +309,13 @@ func handleRemoveWebhook(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		w.Write([]byte(http.StatusText(http.StatusNotFound)))
 		return
 	}
+
 	ns, bc := r.FormValue("ns"), r.FormValue("bc")
+	if len(ns) == 0 || len(bc) == 0 {
+		http.Error(w, "ns or bc empty", http.StatusBadRequest)
+		return
+	}
+
 	err = removeWebhook(gitter, ns, bc, hookid)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
