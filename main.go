@@ -37,6 +37,15 @@ func main() {
 	router.POST("/repos/:source/webhook", authorize(handleCreateWebhook))
 	router.DELETE("/repos/:source/webhook/:hookid", authorize(handleRemoveWebhook))
 
+	debug := true
+	if debug {
+		router.GET("/debug/pprof/", debugIndex)
+		router.GET("/debug/pprof/:name", debugIndex)
+		// router.GET("/debug/pprof/profile", debugProfile)
+		// router.GET("/debug/pprof/symbol", debugSymbol)
+
+	}
+
 	clog.Debug("listening on port 7000 ...")
 	clog.Fatal(http.ListenAndServe(":7000", router))
 
@@ -68,7 +77,7 @@ func init() {
 			redisStorager = NewRedisKeyValueStorager(
 				words[0]+":"+words[1],
 				"", // blank clusterName means no sentinel servers
-				strings.Join(words[2:], "+"),// password
+				strings.Join(words[2:], "+"), // password
 
 			)
 
