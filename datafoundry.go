@@ -18,8 +18,8 @@ import (
 
 type DataFoundryClient struct {
 	host        string
-	oapiUrl     string
-	kapiUrl     string
+	oapiURL     string
+	kapiURL     string
 	bearerToken atomic.Value
 }
 
@@ -41,9 +41,9 @@ type User struct {
 func NewDataFoundryTokenClient(bearerToken string) *DataFoundryClient {
 	// host = setBaseUrl(host)
 	client := &DataFoundryClient{
-		host:    DataFoundryHostAddr,
-		oapiUrl: DataFoundryHostAddr + "/oapi/v1",
-		kapiUrl: DataFoundryHostAddr + "/api/v1",
+		host:    dataFoundryHostAddr,
+		oapiURL: dataFoundryHostAddr + "/oapi/v1",
+		kapiURL: dataFoundryHostAddr + "/api/v1",
 	}
 
 	client.setBearerToken(bearerToken)
@@ -78,19 +78,19 @@ func (c *DataFoundryClient) CreateSecret(ns, name string, data map[string]string
 }
 
 func (c *DataFoundryClient) OGet(uri string, into interface{}) error {
-	return c.doRequest("GET", c.oapiUrl+uri, nil, into)
+	return c.doRequest("GET", c.oapiURL+uri, nil, into)
 }
 
 func (c *DataFoundryClient) OPost(uri string, body, into interface{}) error {
-	return c.doRequest("POST", c.oapiUrl+uri, body, into)
+	return c.doRequest("POST", c.oapiURL+uri, body, into)
 }
 
 func (c *DataFoundryClient) KGet(uri string, into interface{}) error {
-	return c.doRequest("GET", c.kapiUrl+uri, nil, into)
+	return c.doRequest("GET", c.kapiURL+uri, nil, into)
 }
 
 func (c *DataFoundryClient) KPost(uri string, body, into interface{}) error {
-	return c.doRequest("POST", c.kapiUrl+uri, body, into)
+	return c.doRequest("POST", c.kapiURL+uri, body, into)
 }
 
 func (c *DataFoundryClient) doRequest(method, url string, bodyParams interface{}, v interface{}) (err error) {

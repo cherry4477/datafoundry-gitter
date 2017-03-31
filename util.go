@@ -15,10 +15,10 @@ import (
 	"github.com/zonesan/clog"
 )
 
-func setBaseUrl(urlStr string) string {
+func setBaseURL(urlStr string) string {
 	// Make sure the given URL end with a slash
 	if strings.HasSuffix(urlStr, "/") {
-		return setBaseUrl(strings.TrimSuffix(urlStr, "/"))
+		return setBaseURL(strings.TrimSuffix(urlStr, "/"))
 	}
 	return urlStr
 }
@@ -44,7 +44,7 @@ func debug(v interface{}) {
 
 func RespOK(w http.ResponseWriter, data interface{}) {
 	if data == nil {
-		data = genRespJson(nil)
+		data = genRespJSON(nil)
 	}
 
 	if body, err := json.MarshalIndent(data, "", "  "); err != nil {
@@ -57,7 +57,7 @@ func RespOK(w http.ResponseWriter, data interface{}) {
 }
 
 func RespError(w http.ResponseWriter, err error) {
-	resp := genRespJson(err)
+	resp := genRespJSON(err)
 
 	if body, err := json.MarshalIndent(resp, "", "  "); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -69,7 +69,7 @@ func RespError(w http.ResponseWriter, err error) {
 
 }
 
-func genRespJson(err error) *APIResponse {
+func genRespJSON(err error) *APIResponse {
 	resp := new(APIResponse)
 
 	if err == nil {
@@ -163,7 +163,7 @@ func httpAddr(addr string) string {
 		return fmt.Sprintf("http://%s", addr)
 	}
 
-	return setBaseUrl(addr)
+	return setBaseURL(addr)
 }
 
 func httpsAddr(addr string) string {
@@ -173,5 +173,5 @@ func httpsAddr(addr string) string {
 		return fmt.Sprintf("https://%s", addr)
 	}
 
-	return setBaseUrl(addr)
+	return setBaseURL(addr)
 }

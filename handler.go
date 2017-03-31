@@ -97,7 +97,7 @@ func handleRepos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	c := r.FormValue("cache")
-	var cache bool = false
+	var cache = false
 	if c == "true" {
 		clog.Debug("using repos cache.")
 		cache = true
@@ -338,13 +338,13 @@ func handleGitterAuthorize(w http.ResponseWriter, r *http.Request, ps httprouter
 	source := ps.ByName("source")
 	user := r.Header.Get("user")
 
-	redirect_url := r.FormValue("redirect_url")
-	if len(redirect_url) == 0 {
+	redirectURL := r.FormValue("redirect_url")
+	if len(redirectURL) == 0 {
 		RespError(w, ErrorNewMsg(ErrCodeBadRequest, "redirect_url empty"))
 		return
 	}
 
-	queryStr := "?redirect_url=" + redirect_url + "&user=" + user
+	queryStr := "?redirect_url=" + redirectURL + "&user=" + user
 	clog.Debug("queryStr:", queryStr)
 
 	switch source {

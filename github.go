@@ -94,12 +94,12 @@ func (hub *GitHub) ListPersonalRepos(cache bool) *[]Repositories {
 		if *v.Owner.Type == "User" {
 			owner.Personal = true
 		}
-		repo.CloneUrl = *v.CloneURL
+		repo.CloneURL = *v.CloneURL
 		repo.ID = *v.ID
 		repo.Name = *v.Name
 		repo.Namespace = *v.Owner.Login
 		repo.Private = *v.Private
-		repo.SshUrl = *v.SSHURL
+		repo.SSHURL = *v.SSHURL
 		repos[owner] = append(repos[owner], repo)
 	}
 
@@ -202,17 +202,17 @@ func (hub *GitHub) RemoveWebhook(ns, bc string, id int) error {
 	key := ns + "/" + bc
 	hook, err := store.GetWebHook(key)
 	if hook == nil {
-		return errors.New("hook not found.")
+		return errors.New("hub hook not found")
 	}
 
 	if id != hook.ID {
 		clog.Errorf("hook %v mismatch, want remvoe %v, and met %v", hook.Name, id, hook.ID)
-		return errors.New("hook id mismatch.")
+		return errors.New("hub hook id mismatch")
 	}
 
 	if hub.source != hook.Source {
 		clog.Errorf("hook %v (id %v) belongs to %v, and met %v", hook.Name, hook.ID, hook.Source, hub.source)
-		return errors.New("invalid request.")
+		return errors.New("invalid request")
 	}
 
 	clog.Debugf("remove github.com/%v/%v hook %v (hook id %v)", hook.Ns, hook.Repo, key, hook.ID)

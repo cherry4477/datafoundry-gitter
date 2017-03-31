@@ -12,7 +12,7 @@ import (
 
 var (
 	store               Storage
-	DataFoundryHostAddr string
+	dataFoundryHostAddr string
 )
 
 func main() {
@@ -53,12 +53,12 @@ func main() {
 
 func init() {
 
-	DataFoundryHostAddr = os.Getenv("DATAFOUNDRY_API_SERVER")
-	if len(DataFoundryHostAddr) == 0 {
+	dataFoundryHostAddr = os.Getenv("DATAFOUNDRY_API_SERVER")
+	if len(dataFoundryHostAddr) == 0 {
 		clog.Fatal("DATAFOUNDRY_API_SERVER must be specified.")
 	}
-	DataFoundryHostAddr = httpsAddr(DataFoundryHostAddr)
-	clog.Debug("datafoundry api server:", DataFoundryHostAddr)
+	dataFoundryHostAddr = httpsAddr(dataFoundryHostAddr)
+	clog.Debug("datafoundry api server:", dataFoundryHostAddr)
 
 	// redis
 
@@ -99,7 +99,7 @@ func init() {
 				Name     string `json:"Name"`
 				Password string `json:"Password"`
 				Port     string `json:"Port"`
-				Uri      string `json:"Uri"`
+				URI      string `json:"Uri"`
 				Username string `json:"Username"`
 				VHost    string `json:"Vhost"`
 			}
@@ -138,7 +138,6 @@ func init() {
 	} else {
 		store = NewStorage(NewMemoryKeyValueStorager())
 
-		clog.Warn("redis storage is not reachable, use memory storage instead.")
 		clog.Warn("REDIS STORAGE IS NOT REACHABLE, USE MEMORY STORAGE INSTEAD.")
 	}
 }

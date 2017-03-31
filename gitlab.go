@@ -99,12 +99,12 @@ func (lab *GitLab) ListPersonalRepos(cache bool) *[]Repositories {
 		if v.Owner != nil {
 			owner.Personal = true
 		}
-		repo.CloneUrl = v.HTTPURLToRepo
+		repo.CloneURL = v.HTTPURLToRepo
 		repo.ID = v.ID
 		repo.Name = v.Name
 		repo.Namespace = v.Namespace.Name
 		repo.Private = !v.Public
-		repo.SshUrl = v.SSHURLToRepo
+		repo.SSHURL = v.SSHURLToRepo
 		repos[owner] = append(repos[owner], repo)
 	}
 
@@ -187,16 +187,16 @@ func (lab *GitLab) RemoveWebhook(ns, bc string, id int) error {
 	key := ns + "/" + bc
 	hook, err := store.GetWebHook(key)
 	if hook == nil {
-		return errors.New("hook not found.")
+		return errors.New("lab hook not found")
 	}
 	if id != hook.ID {
 		clog.Errorf("hook %v mismatch, want remvoe %v, and met %v", hook.Name, id, hook.ID)
-		return errors.New("hook id mismatch.")
+		return errors.New("lab hook id mismatch")
 	}
 
 	if lab.source != hook.Source {
 		clog.Errorf("hook %v (id %v) belongs to %v, and met %v", hook.Name, hook.ID, hook.Source, lab.source)
-		return errors.New("invalid request.")
+		return errors.New("invalid request")
 	}
 
 	clog.Debugf("remove gitlab project %v hook %v (hook id %v)", hook.Pid, key, hook.ID)
@@ -254,19 +254,19 @@ func (lab *GitLab) generateSSHeKeyPair() (*SSHKey, error) {
 		return nil, err
 	}
 
-	priv_der := x509.MarshalPKCS1PrivateKey(priv)
+	privDer := x509.MarshalPKCS1PrivateKey(priv)
 
 	// pem.Block
 	// blk pem.Block
-	priv_blk := pem.Block{
+	privBlk := pem.Block{
 		Type:    "RSA PRIVATE KEY",
 		Headers: nil,
-		Bytes:   priv_der,
+		Bytes:   privDer,
 	}
 
 	// Resultant private key in PEM format.
 	// priv_pem string
-	privateKey := string(pem.EncodeToMemory(&priv_blk))
+	privateKey := string(pem.EncodeToMemory(&privBlk))
 	//println("private:", privateKey)
 
 	pub := priv.PublicKey
@@ -300,15 +300,16 @@ func (lab *GitLab) CreateSecret(ns, name string) (*Secret, error) {
 			clog.Error(err)
 			return nil, err
 		}
-		if sshkey, err := lab.deploySSHPubKey(*key.Pubkey); err != nil {
+		sshkey, err := lab.deploySSHPubKey(*key.Pubkey)
+		if err != nil {
 			clog.Error(err)
 			return nil, err
-		} else {
-			key.ID = sshkey.ID
-			key.CreatedAt = sshkey.CreatedAt
-			// clog.Debugf("sshkey: %#v", sshkey)
-			clog.Debugf("key: %#v", key)
 		}
+
+		key.ID = sshkey.ID
+		key.CreatedAt = sshkey.CreatedAt
+		// clog.Debugf("sshkey: %#v", sshkey)
+		clog.Debugf("key: %#v", key)
 
 		store.SaveSSHKeyGitlab(lab.User(), key)
 	}

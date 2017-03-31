@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	gitlabBaseURL     = setBaseUrl(os.Getenv("GITLAB_BASEURL"))
+	gitlabBaseURL     = setBaseURL(os.Getenv("GITLAB_BASEURL"))
 	gitHubCallBackURL = os.Getenv("GITHUB_CALLBACK_URL")
 	gitLabCallBackURL = os.Getenv("GITLAB_CALLBACK_URL")
 	// You must register the app at https://github.com/settings/applications

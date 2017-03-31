@@ -35,8 +35,8 @@ type Repository struct {
 	ID        int    `json:"id,omitempty"`
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
-	CloneUrl  string `json:"clone_url"`
-	SshUrl    string `json:"ssh_clone_url,omitempty"`
+	CloneURL  string `json:"clone_url"`
+	SSHURL    string `json:"ssh_clone_url,omitempty"`
 	Private   bool   `json:"private"`
 	//FullName  string `json:"full_name"`
 	//Branches []Branch `json:"branches"`

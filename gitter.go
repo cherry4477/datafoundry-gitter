@@ -42,15 +42,15 @@ func checkWebhook(gitter Gitter, ns, bc string) *WebHook {
 
 func checkSecret(gitter Gitter, ns string) *Secret {
 	clog.Debug("checkSecret interface")
+	var err error
+
 	secret := gitter.CheckSecret(ns)
 	if secret == nil {
 		secretName := gitter.Source() + "-" + gitter.User() + "-" + randomStr(8)
-		if secret, err := gitter.CreateSecret(ns, secretName); err != nil {
+		if secret, err = gitter.CreateSecret(ns, secretName); err != nil {
+			clog.Error(err)
 			return nil
-		} else {
-			return secret
 		}
-
 	}
 	return secret
 }

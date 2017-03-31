@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/garyburd/redigo/redis"
 	"github.com/zonesan/clog"
 	"golang.org/x/oauth2"
-	"sync"
-	"time"
 )
 
 func gitlabUserAuthTokenKey(user string) string {
@@ -46,7 +47,7 @@ func (se storageError) Error() string {
 }
 
 const (
-	StorageErr_NotFound storageError = "key not found or value is nil"
+	StorageErrNotFound storageError = "key not found or value is nil"
 )
 
 type Storage interface {
@@ -106,8 +107,8 @@ func (s *storage) Load(key string, into interface{}) error {
 
 	// todo: ok?
 	if data == nil {
-		clog.Warn(StorageErr_NotFound)
-		return StorageErr_NotFound
+		clog.Warn(StorageErrNotFound)
+		return StorageErrNotFound
 	}
 
 	err = json.Unmarshal(data, into)
@@ -269,9 +270,8 @@ func (ms *memoryStorager) Get(key string) ([]byte, error) {
 	ms.RUnlock()
 	if present {
 		return value, nil
-	} else {
-		return nil, StorageErr_NotFound
 	}
+	return nil, StorageErrNotFound
 }
 
 func (ms *memoryStorager) Delete(key string) error {
@@ -289,7 +289,7 @@ type redisStorager struct {
 	pool *redis.Pool
 }
 
-// addr format is host:port.
+// NewRedisKeyValueStorager addr format is host:port.
 // clusterName is blank means addr is the master address, otherwise addr is sentinel address.
 func NewRedisKeyValueStorager(addr, clusterName, password string) KeyValueStorager {
 	var p = &redis.Pool{
@@ -374,7 +374,7 @@ func (rs *redisStorager) Get(key string) ([]byte, error) {
 	b, err := redis.Bytes(c.Do("GET", key))
 	if err != nil {
 		if err == redis.ErrNil {
-			return nil, StorageErr_NotFound
+			return nil, StorageErrNotFound
 		}
 
 		clog.Error("[GET] err:", err)

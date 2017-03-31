@@ -13,11 +13,11 @@ import (
 func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 
-	redirect_url, user, token, err := callbackValidate(w, r, oauthConf)
+	redirectURL, user, token, err := callbackValidate(w, r, oauthConf)
 	// token, err := exchangeToken(oauthConfGitLab, code)
 	if err != nil {
 		clog.Errorf("oauthConf.Exchange() failed with '%s'\n", err)
-		http.Redirect(w, r, redirect_url, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
@@ -25,7 +25,7 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 		clog.Error("save gitlab token error:", err)
 	}
 
-	http.Redirect(w, r, redirect_url, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 
 }
 
@@ -33,11 +33,11 @@ func handleGitHubCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 func handleGitLabCallback(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	clog.Info("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 
-	redirect_url, user, token, err := callbackValidate(w, r, oauthConfGitLab)
+	redirectURL, user, token, err := callbackValidate(w, r, oauthConfGitLab)
 	// token, err := exchangeToken(oauthConfGitLab, code)
 	if err != nil {
 		clog.Errorf("oauthConfGitLab.Exchange() failed with '%s'\n", err)
-		http.Redirect(w, r, redirect_url, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
@@ -45,22 +45,22 @@ func handleGitLabCallback(w http.ResponseWriter, r *http.Request, _ httprouter.P
 		clog.Error("save gitlab token error:", err)
 	}
 
-	http.Redirect(w, r, redirect_url, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 
 }
 
 func callbackValidate(w http.ResponseWriter, r *http.Request, oauthConf *oauth2.Config) (string, string, *oauth2.Token, error) {
-	redirect_url := r.FormValue("redirect_url")
+	redirectURL := r.FormValue("redirect_url")
 	user := r.FormValue("user")
 	state := r.FormValue("state")
 	code := r.FormValue("code")
 
-	clog.Debug("user:", user, "redirect_url:", redirect_url, "state:", state, "code:", code)
+	clog.Debug("user:", user, "redirect_url:", redirectURL, "state:", state, "code:", code)
 
 	if state != oauthStateString {
 		clog.Errorf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
 		//http.Redirect(w, r, "/", http.StatusFound)
-		return "", "", nil, errors.New("invalid oauth state.")
+		return "", "", nil, errors.New("invalid oauth state")
 	}
 
 	token, err := exchangeToken(oauthConf, code)
@@ -70,5 +70,5 @@ func callbackValidate(w http.ResponseWriter, r *http.Request, oauthConf *oauth2.
 		//http.Redirect(w, r, redirect_url, http.StatusFound)
 	}
 
-	return redirect_url, user, token, err
+	return redirectURL, user, token, err
 }
